@@ -1,0 +1,49 @@
+v0.18.0-rc — presets & guided workflow
+
+Release candidate for the preset-system overhaul, exact-mode crop
+preview, and the three-phase guided-workflow redesign. See
+docs/Preset-System-Spec-2026-06.md and
+docs/Guided-Workflow-Spec-2026-06.md.
+
+Presets — library + fit-vs-crop correctness
+- Expanded to 14 built-ins, grouped via <optgroup> into Web / Social
+  / Email, with intent-first names (e.g. "Social Square — 1080 x 1080").
+- Fit-vs-exact fix: Social presets now use mode 'exact' (center-crop)
+  so output matches the labelled size instead of just fitting inside
+  it. Ceiling presets (Full HD, Large Web, Thumbnail, Email Hero/
+  Retina) stay fit-within / max-long-edge.
+- Avatar vs Thumbnail: both 800x800, differ by mode (crop vs fit).
+- neverUpscale on by default for all built-ins.
+- Aspect-ratio badges on exact presets via pure ratioLabel() helper.
+- Last-preset restore falls back to Custom when the id no longer
+  resolves.
+
+Crop preview
+- Exact-mode center-crop overlay on each card thumbnail
+  (computeCropKeepRect / updateCropOverlay in preview.js). Pure ratio
+  math accounting for object-fit: contain; hidden when no crop applies.
+
+Guided workflow (Phases 1-3)
+- Phase 1: header tagline; empty-state hero (drop target + privacy
+  line + preset chips), toggled inversely with the preview area.
+- Phase 2: numbered sidebar steps (1 Add / 2 Choose a size / 3
+  Export) with Step 1 done-check; advanced controls fold into a native
+  <details> "Customize" panel that remembers its open state
+  (pixeldrop-customize-open) and auto-opens on the Custom preset.
+- Phase 3: Step 3 export block mirroring Download / ZIP with a live
+  "N images · ~X MB out" readout (disabled until a result is ready)
+  and a transient "Exported" check.
+
+Fixed
+- Toolbar Download / Download ZIP exported nothing: the click Event
+  was passed as idsFilter (regression from the 3b multi-select work);
+  Array.from(event) is []. Wrapped both wirings in arrows.
+- Empty preview panel could flash on load: .preview-area display:flex
+  overrode its hidden attribute. Added .preview-area[hidden]{display:
+  none}.
+
+Verification: lint 0 errors, build clean, HTML balanced, all element
+ids + CSS vars resolve, Prettier clean, independent review pass with
+four findings fixed.
+
+Deferred: edit/crop modal responsiveness at tight widths.

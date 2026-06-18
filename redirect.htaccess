@@ -1,0 +1,9 @@
+# --- Legacy-domain redirects -> pixelgnome.com (301, preserves path) ---
+# Lives in the shared /pixelgnome webspace folder.
+# Only the old domains are matched, so pixelgnome.com / www.pixelgnome.com are untouched.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP_HOST} (^|\.)pixeldroplab\.com$ [NC,OR]
+  RewriteCond %{HTTP_HOST} (^|\.)getpixeldrop\.com$ [NC]
+  RewriteRule ^ https://pixelgnome.com%{REQUEST_URI} [R=301,L]
+</IfModule>

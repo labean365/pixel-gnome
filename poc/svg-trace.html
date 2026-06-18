@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PixelDrop — SVG Trace (Proof of Concept)</title>
+
+  <!--
+    PixelDrop SVG Trace POC
+    ------------------------
+    Library: ImageTracerJS v1.2.6 (https://github.com/jankovicsandras/imagetracerjs)
+      - Pure JS, ~50KB, no WASM, runs entirely client-side.
+      - Multi-color tracing via k-means palette quantization.
+      - Returns SVG markup string we can drop straight into Blob -> download.
+
+    Why ImageTracer over Potrace for the POC:
+      - Potrace = monochrome only; would need a multi-pass color extractor on top.
+      - ImageTracer handles color out of the box, which is the realistic use case
+        (logos with brand colors, flat illustrations, simple UI graphics).
+      - For a production rollout we could offer BOTH: Potrace for B&W (cleaner
+        paths, smaller files) and ImageTracer for color.
+
+    Integration plan if this graduates from POC:
+      1. Move tracer into a Web Worker (process-worker.js pattern) — tracing
+         a 1000x1000 image blocks the main thread for ~1-3s.
+      2. Add "Trace to SVG" as an output format in settings.js next to PNG/WebP/AVIF.
+      3. Gate behind the same UX banner shown below + per-image preflight
+         (path count + size ratio) before allowing the download.
+      4. Fallback: if traced SVG > original raster, surface a warning and offer
+         to revert to PNG export.
+  -->
+
+  <style>
+    /* Inherit PixelDrop's design tokens for visual continuity */
+    :root {
+      --color-bg: #f5f5f7;
+      --color-surface: #ffffff;
+      --color-surface-alt: #f0f0f2;
+      --color-border: #d1d1d6;
+      --color-border-light: #e5e5ea;
+      --color-text: #1d1d1f;
+      --color-text-secondary: #6e6e73;
+      --color-text-muted: #aeaeb2;
+      --color-accent: #0071e3;
+      --color-accent-hover: #0077ed;
+      --color-accent-light: rgba(0, 113, 227, 0.08);
+      --color-danger: #ff3b30;
+      --color-success: #34c759;
+      --color-warning: #ff9f0a;
+      --color-warning-bg: rgba(255, 159, 10, 0.10);
+      --color-warning-border: rgba(255, 159, 10, 0.35);
+      --color-info-bg: rgba(0, 113, 227, 0.06);
+      --color-info-border: rgba(0, 113, 227, 0.25);
+
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-bg: #1c1c1e;
+        --color-surface: #2c2c2e;
+        --color-surface-alt: #3a3a3c;
+        --color-border: #38383a;
+        --color-border-light: #2c2c2e;
+        --color-text: #f5f5f7;
+        --color-text-secondary: #aeaeb2;
+        --color-text-muted: #6e6e73;
+        --color-warning-bg: rgba(255, 159, 10, 0.14);
+        --color-info-bg: rgba(0, 113, 227, 0.12);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.5;
+      padding: var(--space-xl) var(--space-lg);
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; }
+    header h1 {
+      margin: 0 0 var(--space-xs);
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    header p {
+      margin: 0 0 var(--space-lg);
+      color: var(--color-text-secondary);
+      font-size: 0.9rem;
+    }
+
+    /* UX gating banner — this is the production-facing copy */
+    .gate-banner {
+      display: flex;
+      gap: var(--space-md);
+      align-items: flex-start;
+      padding: var(--space-md);
+      margin-bottom: var(--space-lg);
+      background: var(--color-info-bg);
+      border: 1px solid var(--color-info-border);
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+    }
+    .gate-banner .icon {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      color: var(--color-accent);
+    }
+    .gate-banner strong { display: block; margin-bottom: 2px; }
+    .gate-banner .examples {
+      margin-top: var(--space-sm);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-sm);
+      font-size: 0.8rem;
+    }
+    .gate-banner .examples > div {
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+    }
+    .gate-banner .examples .good { border-left: 3px solid var(--color-success); }
+    .gate-banner .examples .bad { border-left: 3px solid var(--color-danger); }
+    .gate-banner .examples b { display: block; font-weight: 600; }
+
+    /* Drop zone — same visual language as PixelDrop's primary drop zone */
+    .drop-zone {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+      text-align: center;
+      background: var(--color-surface);
+      cursor: pointer;
+      transition: border-color 120ms ease, background 120ms ease;
+    }
+    .drop-zone:hover, .drop-zone.is-dragover {
+      border-color: var(--color-accent);
+      background: var(--color-accent-light);
+    }
+    .drop-zone p { margin: var(--space-xs) 0; color: var(--color-text-secondary); }
+    .drop-zone .hint { font-size: 0.8rem; color: var(--color-text-muted); }
+    .drop-zone input[type="file"] { display: none; }
+
+    /* Controls */
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: var(--space-md);
+      margin: var(--space-lg) 0;
+      padding: var(--space-md);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-md);
+    }
+    .control label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-xs);
+    }
+    .control input[type="range"] { width: 100%; }
+    .control .value { font-family: var(--font-mono); font-size: 0.85rem; }
+    .control-actions {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: var(--space-sm);
+      justify-content: flex-end;
+    }
+    button {
+      font: inherit;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-text);
+      cursor: pointer;
+    }
+    button.primary {
+      background: var(--color-accent);
+      border-color: var(--color-accent);
+      color: white;
+    }
+    button.primary:hover { background: var(--color-accent-hover); }
+    button[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+    /* Comparison grid */
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-md);
+    }
+    @media (max-width: 720px) {
+      .compare { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .panel header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--color-border-light);
+      background: var(--color-surface-alt);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .panel header .badge {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--color-text-secondary);
+    }
+    .panel .preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 360px;
+      padding: var(--space-md);
+      background:
+        repeating-conic-gradient(var(--color-surface-alt) 0% 25%, var(--color-surface) 0% 50%)
+        0 0 / 16px 16px;
+    }
+    .panel .preview img,
+    .panel .preview svg {
+      max-width: 100%;
+      max-height: 360px;
+      display: block;
+    }
+    .panel .empty { color: var(--color-text-muted); font-size: 0.85rem; }
+
+    /* Stats row */
+    .stats {
+      margin-top: var(--space-md);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: var(--space-sm);
+    }
+    .stat {
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-sm);
+    }
+    .stat .label { font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat .value { font-family: var(--font-mono); font-size: 0.95rem; }
+    .stat.warn { border-color: var(--color-warning-border); background: var(--color-warning-bg); }
+    .stat.warn .value { color: var(--color-warning); }
+
+    /* Inline warning shown when path count or size ratio is bad */
+    .preflight-warning {
+      display: none;
+      margin-top: var(--space-md);
+      padding: var(--space-md);
+      background: var(--color-warning-bg);
+      border: 1px solid var(--color-warning-border);
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+    }
+    .preflight-warning.show { display: block; }
+    .preflight-warning strong { color: var(--color-warning); }
+
+    /* Loading overlay */
+    .loader {
+      display: none;
+      align-items: center;
+      gap: var(--space-sm);
+      color: var(--color-text-secondary);
+      font-size: 0.85rem;
+    }
+    .loader.show { display: inline-flex; }
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid var(--color-border);
+      border-top-color: var(--color-accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer {
+      margin-top: var(--space-xl);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--color-border-light);
+      color: var(--color-text-muted);
+      font-size: 0.75rem;
+    }
+    code {
+      font-family: var(--font-mono);
+      background: var(--color-surface-alt);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>PixelDrop — SVG Trace <span style="color:var(--color-text-muted);font-weight:400;">· Proof of Concept</span></h1>
+      <p>Raster → SVG vectorization via ImageTracerJS. Drop a logo or flat illustration to see how it performs.</p>
+    </header>
+
+    <!-- The UX gating banner — this is the copy candidate for the real PixelDrop -->
+    <div class="gate-banner" role="note" aria-label="Best-use guidance">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <div>
+        <strong>Tracing works best on flat, high-contrast art.</strong>
+        Photos produce massive SVGs (thousands of paths) that are usually larger than the original — and email clients like Gmail and Outlook strip inline SVG anyway, so keep a PNG fallback for transactional use.
+        <div class="examples">
+          <div class="good"><b>Good fit</b>Logos · icons · monoline illustrations · screenshots of UI · simple banners</div>
+          <div class="bad"><b>Avoid</b>Photographs · gradients · soft shadows · anti-aliased text at small sizes</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drop zone -->
+    <label class="drop-zone" id="dropZone">
+      <p><strong>Drop an image here</strong> or click to browse</p>
+      <p class="hint">Try <code>docs/fixtures/1897 Jeans.png</code> for a good case, or <code>docs/fixtures/IMG_0032.HEIC</code> to see the failure mode (photo).</p>
+      <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/gif" />
+    </label>
+
+    <!-- Controls -->
+    <div class="controls" id="controls" aria-disabled="true" style="opacity:0.55;pointer-events:none;">
+      <div class="control">
+        <label for="colorsRange">Colors <span class="value" id="colorsVal">16</span></label>
+        <input type="range" id="colorsRange" min="2" max="64" step="1" value="16" />
+      </div>
+      <div class="control">
+        <label for="pathOmitRange">Path omit <span class="value" id="pathOmitVal">8</span> <span style="color:var(--color-text-muted);">(drops tiny shapes)</span></label>
+        <input type="range" id="pathOmitRange" min="0" max="40" step="1" value="8" />
+      </div>
+      <div class="control">
+        <label for="blurRange">Blur <span class="value" id="blurVal">0</span> <span style="color:var(--color-text-muted);">(smooths noise)</span></label>
+        <input type="range" id="blurRange" min="0" max="5" step="1" value="0" />
+      </div>
+      <div class="control-actions">
+        <span class="loader" id="loader"><span class="spinner"></span> Tracing…</span>
+        <button id="retraceBtn" class="primary" type="button">Retrace</button>
+        <button id="downloadBtn" type="button" disabled>Download SVG</button>
+      </div>
+    </div>
+
+    <!-- Side-by-side comparison -->
+    <div class="compare">
+      <section class="panel">
+        <header>
+          <span>Original (raster)</span>
+          <span class="badge" id="origBadge">—</span>
+        </header>
+        <div class="preview" id="origPreview">
+          <span class="empty">Drop an image to begin.</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header>
+          <span>Traced (SVG)</span>
+          <span class="badge" id="svgBadge">—</span>
+        </header>
+        <div class="preview" id="svgPreview">
+          <span class="empty">SVG will render here.</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats" id="stats" hidden>
+      <div class="stat"><div class="label">Raster size</div><div class="value" id="statRasterSize">—</div></div>
+      <div class="stat"><div class="label">SVG size</div><div class="value" id="statSvgSize">—</div></div>
+      <div class="stat" id="statSizeDeltaCard"><div class="label">Delta</div><div class="value" id="statSizeDelta">—</div></div>
+      <div class="stat" id="statPathsCard"><div class="label">Paths</div><div class="value" id="statPaths">—</div></div>
+      <div class="stat"><div class="label">Colors used</div><div class="value" id="statColors">—</div></div>
+      <div class="stat"><div class="label">Trace time</div><div class="value" id="statTime">—</div></div>
+    </div>
+
+    <!-- Pre-flight warning (path explosion / size regression) -->
+    <div class="preflight-warning" id="preflightWarning">
+      <strong>Heads up:</strong>
+      <span id="preflightMsg"></span>
+    </div>
+
+    <footer>
+      Built with
+      <a href="https://github.com/jankovicsandras/imagetracerjs" target="_blank" rel="noopener">ImageTracerJS</a>
+      · Loaded from jsDelivr CDN ·
+      All processing happens locally in your browser.
+    </footer>
+  </div>
+
+  <!-- ImageTracerJS from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/imagetracerjs@1.2.6/imagetracer_v1.2.6.min.js"></script>
+
+  <script>
+    /* -----------------------------------------------------------
+       State
+       ----------------------------------------------------------- */
+    const state = {
+      file: null,
+      rasterBytes: 0,
+      rasterWidth: 0,
+      rasterHeight: 0,
+      lastSvg: null,
+    };
+
+    const els = {
+      dropZone: document.getElementById('dropZone'),
+      fileInput: document.getElementById('fileInput'),
+      controls: document.getElementById('controls'),
+      colorsRange: document.getElementById('colorsRange'),
+      colorsVal: document.getElementById('colorsVal'),
+      pathOmitRange: document.getElementById('pathOmitRange'),
+      pathOmitVal: document.getElementById('pathOmitVal'),
+      blurRange: document.getElementById('blurRange'),
+      blurVal: document.getElementById('blurVal'),
+      retraceBtn: document.getElementById('retraceBtn'),
+      downloadBtn: document.getElementById('downloadBtn'),
+      loader: document.getElementById('loader'),
+      origPreview: document.getElementById('origPreview'),
+      svgPreview: document.getElementById('svgPreview'),
+      origBadge: document.getElementById('origBadge'),
+      svgBadge: document.getElementById('svgBadge'),
+      stats: document.getElementById('stats'),
+      statRasterSize: document.getElementById('statRasterSize'),
+      statSvgSize: document.getElementById('statSvgSize'),
+      statSizeDelta: document.getElementById('statSizeDelta'),
+      statSizeDeltaCard: document.getElementById('statSizeDeltaCard'),
+      statPaths: document.getElementById('statPaths'),
+      statPathsCard: document.getElementById('statPathsCard'),
+      statColors: document.getElementById('statColors'),
+      statTime: document.getElementById('statTime'),
+      preflightWarning: document.getElementById('preflightWarning'),
+      preflightMsg: document.getElementById('preflightMsg'),
+    };
+
+    /* -----------------------------------------------------------
+       Utilities
+       ----------------------------------------------------------- */
+    function fmtBytes(n) {
+      if (!n && n !== 0) return '—';
+      if (n < 1024) return n + ' B';
+      if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+      return (n / 1024 / 1024).toFixed(2) + ' MB';
+    }
+
+    function fmtPercent(n) {
+      const sign = n > 0 ? '+' : '';
+      return sign + n.toFixed(1) + '%';
+    }
+
+    function setControlsEnabled(enabled) {
+      els.controls.style.opacity = enabled ? '1' : '0.55';
+      els.controls.style.pointerEvents = enabled ? 'auto' : 'none';
+      els.controls.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    }
+
+    /* -----------------------------------------------------------
+       File ingest
+       ----------------------------------------------------------- */
+    function handleFile(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      state.file = file;
+      state.rasterBytes = file.size;
+
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        state.rasterWidth = img.naturalWidth;
+        state.rasterHeight = img.naturalHeight;
+        els.origPreview.innerHTML = '';
+        els.origPreview.appendChild(img);
+        els.origBadge.textContent =
+          state.rasterWidth + '×' + state.rasterHeight + ' · ' + fmtBytes(state.rasterBytes);
+        setControlsEnabled(true);
+        trace();
+      };
+      img.src = url;
+    }
+
+    /* Drop zone wiring */
+    els.fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleFile(e.target.files[0]);
+    });
+    ['dragenter', 'dragover'].forEach((ev) => {
+      els.dropZone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        els.dropZone.classList.add('is-dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach((ev) => {
+      els.dropZone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        els.dropZone.classList.remove('is-dragover');
+      });
+    });
+    els.dropZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+
+    /* -----------------------------------------------------------
+       Trace
+       -----------------------------------------------------------
+       ImageTracer.imagedataToSVG signature:
+         ImageTracer.imagedataToSVG(imagedata, options) -> svg string
+       We render the file to a canvas, pull ImageData, then trace.
+    */
+    function getImageData() {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          try {
+            resolve(ctx.getImageData(0, 0, canvas.width, canvas.height));
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = reject;
+        img.src = URL.createObjectURL(state.file);
+      });
+    }
+
+    async function trace() {
+      if (!state.file) return;
+
+      els.loader.classList.add('show');
+      els.retraceBtn.disabled = true;
+      els.downloadBtn.disabled = true;
+
+      // Yield to the browser so the spinner paints before the heavy work starts.
+      await new Promise((r) => setTimeout(r, 30));
+
+      const t0 = performance.now();
+      try {
+        const imageData = await getImageData();
+        const options = {
+          numberofcolors: parseInt(els.colorsRange.value, 10),
+          pathomit: parseInt(els.pathOmitRange.value, 10),
+          blurradius: parseInt(els.blurRange.value, 10),
+          // Quality knobs — leave default-ish but tuned for crisper edges
+          ltres: 1,
+          qtres: 1,
+          colorquantcycles: 3,
+          // Strip background for cleaner output on transparent inputs
+          strokewidth: 1,
+          linefilter: false,
+          scale: 1,
+          // Don't add a viewBox if absent — ImageTracer sets width/height in px
+        };
+        const svgString = ImageTracer.imagedataToSVG(imageData, options);
+        const t1 = performance.now();
+        renderSvgResult(svgString, t1 - t0, options.numberofcolors);
+      } catch (err) {
+        console.error('Trace failed:', err);
+        els.svgPreview.innerHTML =
+          '<span class="empty" style="color:var(--color-danger)">Trace failed: ' + err.message + '</span>';
+      } finally {
+        els.loader.classList.remove('show');
+        els.retraceBtn.disabled = false;
+      }
+    }
+
+    function countSvgPaths(svgString) {
+      // Cheap regex count — good enough for a stat, no DOM parse needed.
+      const matches = svgString.match(/<path\b/g);
+      return matches ? matches.length : 0;
+    }
+
+    function renderSvgResult(svgString, ms, colorCount) {
+      state.lastSvg = svgString;
+
+      // Render — innerHTML is safe here because ImageTracer's output is
+      // entirely generated from pixel data, not arbitrary user input.
+      els.svgPreview.innerHTML = svgString;
+
+      const svgBytes = new Blob([svgString]).size;
+      const pathCount = countSvgPaths(svgString);
+      const delta = ((svgBytes - state.rasterBytes) / state.rasterBytes) * 100;
+
+      // Update badges + stats
+      els.svgBadge.textContent = pathCount + ' paths · ' + fmtBytes(svgBytes);
+      els.stats.hidden = false;
+      els.statRasterSize.textContent = fmtBytes(state.rasterBytes);
+      els.statSvgSize.textContent = fmtBytes(svgBytes);
+      els.statSizeDelta.textContent = fmtPercent(delta);
+      els.statPaths.textContent = pathCount.toLocaleString();
+      els.statColors.textContent = colorCount;
+      els.statTime.textContent = ms.toFixed(0) + ' ms';
+
+      // Warn states
+      els.statSizeDeltaCard.classList.toggle('warn', delta > 0);
+      els.statPathsCard.classList.toggle('warn', pathCount > 500);
+
+      // Preflight warning copy
+      const warnings = [];
+      if (pathCount > 500) {
+        warnings.push('Path count is ' + pathCount.toLocaleString() +
+          '. SVGs over ~500 paths typically render slowly and bloat email size.');
+      }
+      if (delta > 0) {
+        warnings.push('Traced SVG is ' + fmtPercent(delta) +
+          ' larger than the source raster — keep the PNG for this asset.');
+      }
+      if (warnings.length) {
+        els.preflightMsg.textContent = ' ' + warnings.join(' ');
+        els.preflightWarning.classList.add('show');
+      } else {
+        els.preflightWarning.classList.remove('show');
+      }
+
+      els.downloadBtn.disabled = false;
+    }
+
+    /* -----------------------------------------------------------
+       Control wiring
+       ----------------------------------------------------------- */
+    function bindRange(rangeEl, valEl) {
+      rangeEl.addEventListener('input', () => { valEl.textContent = rangeEl.value; });
+    }
+    bindRange(els.colorsRange, els.colorsVal);
+    bindRange(els.pathOmitRange, els.pathOmitVal);
+    bindRange(els.blurRange, els.blurVal);
+
+    els.retraceBtn.addEventListener('click', trace);
+
+    els.downloadBtn.addEventListener('click', () => {
+      if (!state.lastSvg) return;
+      const blob = new Blob([state.lastSvg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const base = (state.file && state.file.name.replace(/\.[^.]+$/, '')) || 'traced';
+      a.href = url;
+      a.download = base + '.svg';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+# PixelGnome cache policy — served via IONOS Apache.
+#
+# Strategy: default every response to "revalidate on each load" so a new deploy
+# reaches returning visitors immediately (this also covers the bare "/" request,
+# which serves index.html via DirectoryIndex and is NOT caught by a .html match).
+# Then override with long, immutable caching for the content-hashed build assets
+# in /assets/, whose filenames change whenever their contents do.
+#
+# The <IfModule> guard means these rules are silently skipped (no 500) if
+# mod_headers is unavailable.
+
+<IfModule mod_headers.c>
+  # Default for everything (incl. "/" and *.html): always revalidate.
+  Header set Cache-Control "no-cache, must-revalidate"
+
+  # Content-hashed JS/CSS/fonts (Vite fingerprints these) — cache for a year.
+  <FilesMatch "\.(js|css|woff2?)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Icons / images (not fingerprinted) — cache a day.
+  <FilesMatch "\.(png|jpe?g|gif|svg|webp|avif|ico)$">
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+
+  # robots.txt / sitemap.xml — cache an hour.
+  <FilesMatch "\.(txt|xml)$">
+    Header set Cache-Control "public, max-age=3600"
+  </FilesMatch>
+</IfModule>

@@ -1,0 +1,33 @@
+{
+  "name": "pixel-gnome",
+  "private": true,
+  "version": "0.23.0-rc",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:single": "vite build --config vite.singlefile.config.js && node scripts/cleanup-singlefile.mjs",
+    "build:all": "vite build && vite build --config vite.singlefile.config.js",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.5.0",
+    "prettier": "^3.8.3",
+    "vite": "^8.0.0",
+    "vite-plugin-singlefile": "^2.3.0"
+  },
+  "dependencies": {
+    "heic-to": "^1.4.2",
+    "jszip": "^3.10.1"
+  }
+}

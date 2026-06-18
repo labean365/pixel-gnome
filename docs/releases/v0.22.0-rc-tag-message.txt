@@ -1,0 +1,32 @@
+v0.22.0-rc — convert & compress (keep original size) workflow
+
+Release candidate. Adds a first-class "convert and/or shrink, keep
+dimensions" path, plus a draft Italian copy refresh.
+
+Convert & compress
+- New "Original size — convert & compress" built-in preset, rendered in
+  its own Original group at the top of the preset dropdown, with a
+  matching "Convert & compress" empty-state chip. Defaults to WebP
+  q0.82, filename pattern {name}-min.
+- Explicit 'original' no-resize mode in shared/dimensions.js
+  (calculateDimensions returns source dimensions untouched) and a
+  matching "Keep original size (no resize)" radio as the first Mode
+  option.
+- Selecting the preset auto-opens the Customize panel and hides the
+  width/height inputs, surfacing Format / Quality / Target file size.
+  Existing controls are reused, not duplicated.
+- getDefaultPreset() pinned to full-hd explicitly so top-of-array
+  additions can't change the first-run default.
+
+i18n
+- New mode.original / mode.originalTip / empty.chipConvert (en + it).
+- Italian naturalness pass over it.js (still DRAFT, pending native
+  review): tagline, drop-zone hint, privacy note, SVG paste, exact
+  mode, never-upscale, target size ("Peso file desiderato"),
+  multi-size, export helper, clear-all, preview stats (Peso /
+  Risparmio), footer credit.
+- Deferred: Output heading kept (avoids clashing with Export step);
+  Italian comma-decimal number formatting is a separate JS change.
+
+Verified: lint 0 errors; multi-file and single-file builds pass;
+footer reads v0.22.0-rc; convert/compress preset present in both.

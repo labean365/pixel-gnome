@@ -1,0 +1,57 @@
+v0.17.0-rc — UX polish, multi-select, drag-to-reorder
+
+Release candidate for the Phase 3 scope from docs/audits/2026-04/
+04-update-plan.md. Three sub-phases ship together: 3a polish (10
+audit-surfaced items), 3b multi-select + bulk actions, 3c drag-to-
+reorder with keyboard a11y parity.
+
+UX polish (3a)
+- Determinate progress bars for HEIC decode, animated GIF round-trip,
+  and ZIP build (>2s threshold respected).
+- Drop-zone rejected-file visual state + descriptive toast.
+- Reset Settings confirm-via-toast with Undo (replaces blocking
+  confirm()).
+- History drawer auto-expand once per session (was: every entry).
+- localStorage-unavailable boot-time toast.
+- APNG / animated WebP magic-byte detection + "animation will be
+  lost" warning (matches existing animated-GIF UX).
+- Eyedropper canvas uses { willReadFrequently: true } — Safari win.
+- Help modal Pro Tips trimmed from 14 bullets to a focused 6.
+- "Saved N/M, Errored K" summary toast after Download All.
+- Preview thumbnails swap to processed output when edits exist.
+
+Multi-select + bulk actions (3b)
+- Selection model: separate Set<string> of ids in main.js (survives
+  reprocessAll, doesn't pollute BatchItem).
+- Shift / Cmd / Ctrl-click semantics + anchor preservation during
+  Shift-range extensions (Finder convention).
+- Bulk toolbar above preview list (shown when selection >= 1): rotate
+  CCW/CW, flip H/V, download, ZIP, delete, deselect.
+- Bulk actions share idsFilter plumbing on reprocessAll,
+  handleExportAll, and handleExportZip — single code path.
+- Delete/Backspace prefers bulk-delete over focused-card path when a
+  selection exists.
+
+Drag-to-reorder (3c)
+- HTML5 DnD on every preview card with 6-dot grip handle. Delegated
+  handlers on list root so newly-added cards participate automatically.
+- Midpoint-split drop indicator via .drop-before::before /
+  .drop-after::after pseudo-elements (no layout jitter).
+- imageQueue Map rebuilt in new order; card DOM moved manually to
+  preserve per-card state (processing bars, blob URLs, selected class).
+- Keyboard parity: cards are tabindex=0; Alt+Up/Down on a focused
+  card calls handleMoveCard(id, direction). Announces landing slot.
+- Reorder is display-only: no filename renumbering, no ZIP iteration
+  reorder (explicit v1 decision).
+
+Deferred
+- Bulk apply preset/format to selection (plan-compliant; the
+  settingsOverride plumbing is a larger architectural change).
+
+Verification
+- npm run lint: 0 errors, 16 pre-existing unused-var warnings (none
+  introduced by Phase 3).
+- npm run format:check: clean (fixed 2 pre-existing prettier nits in
+  crop-colors.js and crop-history.js as part of RC cleanup).
+- vite build + vite build --config vite.singlefile.config.js: both
+  succeed. v0.17.0-rc string propagates to built artifacts.

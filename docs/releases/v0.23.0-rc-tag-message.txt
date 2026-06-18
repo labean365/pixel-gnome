@@ -1,0 +1,35 @@
+v0.23.0-rc — continuous deploy, build/CI fixes, caching, editor polish
+
+Maintenance / infrastructure release candidate. Core image workflow
+unchanged; one visible editor fix.
+
+Deployment & CI
+- Continuous deployment via IONOS Deploy Now: pixelgnome.com builds and
+  deploys automatically from the GitHub repo on every push to main
+  (GitHub Actions -> npm ci -> npm run build -> publish dist/),
+  replacing the manual dist/ upload. Per-release deploy-IONOS.md guide
+  retired. README gains a Deployment section.
+- Fixed the generated build workflow (no install step -> "vite: not
+  found"): added npm ci + npm caching.
+- Resolved a pre-existing peer conflict (@eslint/js ^10 vs eslint 9) by
+  pinning @eslint/js to ^9 (-> 9.39.4) and regenerating the lockfile;
+  install now runs clean without --legacy-peer-deps.
+
+Fixes
+- Editor toolbars (Aspect Ratio / Quick Crop / Export Size) wrap onto
+  extra rows at tight widths instead of scrolling horizontally; no
+  change on wide screens.
+- build:single version check repaired (#versionBadge -> #footerVersion),
+  so build:single / build:all pass again.
+
+Performance
+- New public/.htaccess: HTML no-cache/must-revalidate so deploys land
+  immediately; content-hashed JS/CSS cached one year immutable; images
+  one day; robots/sitemap one hour.
+
+Housekeeping
+- .prettierignore covers generated workflows, deploy-*/, mockups;
+  sources Prettier-formatted. Stale build-artifact folders removed.
+
+Verified: lint 0 errors; build:single passes (badge matches v0.23.0-rc);
+live + staging serve v0.23.0-rc via Deploy Now with correct cache headers.

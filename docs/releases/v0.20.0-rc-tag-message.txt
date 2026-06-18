@@ -1,0 +1,30 @@
+v0.20.0-rc — Mobile & small-window responsiveness
+
+Release candidate. Headline work is the mobile/tablet responsiveness
+pass (docs/Mobile-Responsiveness-Plan.md); also rolls up the previously
+unreleased Customize two-column layout, landing tuning, and header
+changes. CSS-only and breakpoint-scoped — desktop layout unchanged.
+
+Phase 1 — Phones (<=768px)
+- Uncapped the stacked sidebar (was max-height:40vh + overflow:hidden),
+  which crushed the "Choose a size" controls into a ~32px sliver; the
+  page now scrolls as one natural column so all controls are reachable.
+- Hid the duplicate sidebar Export cluster (Preview toolbar already has
+  Download / Download ZIP / Responsive ZIP).
+- Bumped header / preset / preview-card icon buttons to 44px.
+- Added scroll-shadow affordance to the horizontally-scrolling crop
+  toolbars (aspect ratio, quick crop, export size).
+
+Phase 2 — Tablets / narrow windows (769-900px)
+- Made the preview-card thumbnail fluid (clamp(160px,34%,320px), 4:3)
+  so the Dimensions/Size/Saved stats stop clipping in the narrow
+  two-column band. Desktop (>=901px) keeps the fixed 320px thumb.
+
+Phase 3 — Dynamic viewport height
+- Swapped vh -> dvh (with vh fallback) on body/#app min-height, the
+  empty-state hero padding, and the help-modal max-height, so mobile
+  address-bar height changes don't cause layout jumps.
+
+Verified at 390 / 820 / 1100px: sizing controls 32px->full height;
+card stats +57px clipped -> -32px clearance; desktop thumb unchanged
+at 320px.

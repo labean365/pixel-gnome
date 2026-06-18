@@ -1,0 +1,1315 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Pre-paint language: set <html lang> before first paint to avoid a flash
+         of the wrong language. Mirrors i18n.js detection (stored choice →
+         navigator.language → en). Lives outside the analytics markers so it
+         survives the single-file build's strip step. The JS bundle then runs
+         applyStaticTranslations() to fill in the copy. -->
+    <script>
+      (function () {
+        var supported = { en: 1, it: 1 };
+        var lang = null;
+        try {
+          lang = localStorage.getItem('pixelgnome-lang');
+        } catch (e) {
+          /* storage blocked */
+        }
+        if (!lang || !supported[lang]) {
+          var nav = (navigator.language || 'en').toLowerCase().split('-')[0];
+          lang = supported[nav] ? nav : 'en';
+        }
+        document.documentElement.lang = lang;
+      })();
+    </script>
+
+    <!-- BEGIN analytics (Consent Mode default) — stripped from the portable single-file build. -->
+    <!-- Consent Mode v2 default: deny until the visitor consents (privacy-first).
+         Google Tag Manager itself is NOT loaded here — consent-banner.js injects it
+         only after the visitor opts in, so there are zero Google requests before
+         consent. Reads any stored choice so a returning visitor who already
+         accepted starts already granted (GTM then loads immediately via the banner
+         module). -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      (function () {
+        var choice = null;
+        try {
+          choice = localStorage.getItem('pixeldrop-consent');
+        } catch (e) {
+          /* storage blocked — treat as no prior choice */
+        }
+        gtag('consent', 'default', {
+          ad_storage: 'denied',
+          ad_user_data: 'denied',
+          ad_personalization: 'denied',
+          analytics_storage: choice === 'granted' ? 'granted' : 'denied',
+          wait_for_update: 500,
+        });
+      })();
+      // GTM loader — DEFINED but not executed. consent-banner.js calls this only
+      // after the visitor opts in. Living here (not in the JS bundle) keeps the
+      // GTM URL/ID out of the portable single-file build, which strips this block.
+      window.__pdLoadGtm = function () {
+        (function (w, d, s, l, i) {
+          w[l] = w[l] || [];
+          w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+          var f = d.getElementsByTagName(s)[0],
+            j = d.createElement(s),
+            dl = l != 'dataLayer' ? '&l=' + l : '';
+          j.async = true;
+          j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+          f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-M239PR2X');
+      };
+    </script>
+    <!-- END analytics -->
+
+    <!-- Search Console ownership verification (pixelgnome.com) -->
+    <meta name="google-site-verification" content="LTkR9fYRO6tKGmO1wtJleCCesmw_ozmMmpi3__tXQ3o" />
+
+    <!-- Primary meta -->
+    <title>PixelGnome — Private, in-browser image resizer &amp; converter</title>
+    <meta
+      name="description"
+      content="Resize, compress, and convert images right in your browser. Batch-friendly, no uploads, no account — your files never leave your device. Free."
+    />
+    <link rel="canonical" href="https://pixelgnome.com/" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f5f7" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1c1c1e" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PixelGnome" />
+    <meta property="og:url" content="https://pixelgnome.com/" />
+    <meta property="og:title" content="PixelGnome — Private, in-browser image resizer" />
+    <meta
+      property="og:description"
+      content="Resize, compress, and convert images in your browser. No uploads, no account — your files never leave your device."
+    />
+    <meta property="og:image" content="https://pixelgnome.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="PixelGnome — Private, in-browser image resizer" />
+    <meta
+      name="twitter:description"
+      content="Resize, compress, and convert images in your browser. No uploads, no account — your files never leave your device."
+    />
+    <meta name="twitter:image" content="https://pixelgnome.com/og-image.png" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="app-brand">
+          <h1 class="app-title">
+            <span class="app-logo" aria-hidden="true">
+              <img
+                class="app-logo-img"
+                alt=""
+                width="30"
+                height="30"
+                src="data:image/png;base64,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"
+              />
+            </span>
+            PixelGnome
+          </h1>
+          <span class="app-tagline" data-i18n="header.tagline"
+            >Resize images without uploading them</span
+          >
+        </div>
+        <div class="header-actions">
+          <button
+            class="btn btn-icon"
+            id="helpBtn"
+            type="button"
+            title="Help & Changelog"
+            aria-label="Help and changelog"
+            data-tooltip="Help & Changelog"
+            data-i18n-attr="title:header.helpTitle;aria-label:header.helpAria;data-tooltip:header.helpTitle"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </button>
+          <button
+            class="btn btn-icon"
+            id="themeToggle"
+            type="button"
+            title="Toggle dark mode"
+            aria-label="Toggle dark mode"
+            data-i18n-attr="title:header.themeTitle;aria-label:header.themeAria"
+          >
+            <svg
+              class="theme-icon-light"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
+            <svg
+              class="theme-icon-dark"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          </button>
+          <!-- Language switcher (globe-icon dropdown). Menu items are built by
+               i18n switcher in main.js from the LANGUAGES list. -->
+          <div class="lang-switcher" id="langSwitcher">
+            <button
+              class="btn btn-icon"
+              id="langToggle"
+              type="button"
+              title="Language"
+              aria-label="Choose language"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-controls="langMenu"
+              data-i18n-attr="title:header.langTitle;aria-label:header.langAria"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path
+                  d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+                />
+              </svg>
+            </button>
+            <ul class="lang-menu" id="langMenu" role="menu" aria-label="Language" hidden></ul>
+          </div>
+        </div>
+      </header>
+
+      <!-- Screen reader live region for status announcements -->
+      <div class="sr-only" aria-live="assertive" aria-atomic="true" id="srAnnouncer"></div>
+
+      <!-- Main layout: settings sidebar + content area -->
+      <div class="app-layout">
+        <!-- Settings sidebar -->
+        <aside class="settings-panel" id="settingsPanel" aria-label="Image settings">
+          <!-- Step 1 · Add images -->
+          <div class="wf-step-head">
+            <span class="wf-step-num" id="step1Num" aria-hidden="true">1</span>
+            <h2 class="wf-step-title" id="step1Title" data-i18n="step1.title">Add images</h2>
+          </div>
+          <!-- Drop zone (compact, in sidebar) -->
+          <div
+            class="drop-zone"
+            id="dropZone"
+            role="button"
+            tabindex="0"
+            aria-label="Drop images here or click to browse. Accepts JPEG, PNG, WebP, GIF, HEIC, SVG, and AVIF files."
+            data-i18n-attr="aria-label:dropzone.aria"
+          >
+            <div class="drop-zone-content">
+              <svg
+                class="drop-zone-icon"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <p class="drop-zone-text" data-i18n="dropzone.text">Drop images here</p>
+              <p class="drop-zone-hint" data-i18n="dropzone.hint">or click to browse</p>
+              <p class="drop-zone-formats" data-i18n="dropzone.formats">
+                JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF
+              </p>
+            </div>
+            <input
+              type="file"
+              id="fileInput"
+              class="file-input-hidden"
+              multiple
+              accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/svg+xml,image/avif,.heic,.heif,.svg,.avif"
+              aria-label="Choose image files"
+              data-i18n-attr="aria-label:dropzone.fileInputAria"
+            />
+          </div>
+
+          <!-- Privacy reassurance — processing is fully local -->
+          <p class="privacy-note">
+            <svg
+              class="privacy-note-icon"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span data-i18n="privacyNote"
+              >Images are processed locally in your browser — nothing is uploaded or stored.</span
+            >
+          </p>
+
+          <!-- SVG Paste Section -->
+          <div class="svg-paste-section" id="svgPasteSection">
+            <button
+              class="svg-paste-toggle"
+              id="svgPasteToggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="svgPastePanel"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg>
+              <span data-i18n="svgPaste.toggle">Paste SVG Code</span>
+              <svg
+                class="svg-paste-chevron"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="svg-paste-panel" id="svgPastePanel">
+              <textarea
+                class="svg-paste-textarea"
+                id="svgPasteInput"
+                placeholder='Paste SVG markup here, e.g. <svg viewBox="0 0 24 24">...</svg>'
+                data-i18n-attr="placeholder:svgPaste.placeholder"
+                rows="6"
+                spellcheck="false"
+              ></textarea>
+              <div class="svg-paste-actions">
+                <button
+                  class="btn btn-primary btn-sm"
+                  id="svgPasteConvert"
+                  type="button"
+                  data-i18n="svgPaste.convert"
+                >
+                  Convert to Image
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="svgPasteClear"
+                  type="button"
+                  data-i18n="svgPaste.clear"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Scrollable settings area -->
+          <div class="settings-scroll">
+            <!-- Step 2 · Choose a size -->
+            <div class="wf-step-head">
+              <span class="wf-step-num" id="step2Num" aria-hidden="true">2</span>
+              <h2 class="wf-step-title" id="step2Title" data-i18n="step2.title">Choose a size</h2>
+            </div>
+
+            <!-- Preset selector -->
+            <div class="setting-group">
+              <label for="presetSelect" class="setting-label" data-i18n="preset.label"
+                >Preset</label
+              >
+              <select id="presetSelect" class="setting-select">
+                <optgroup label="Web" data-i18n-attr="label:preset.groupWeb">
+                  <option value="full-hd" data-i18n="preset.fullHd">Full HD — 1920 × 1080</option>
+                  <option value="large-web" data-i18n="preset.largeWeb">Large Web — 1600 px</option>
+                  <option value="thumbnail" data-i18n="preset.thumbnail">
+                    Thumbnail — 800 × 800 (fit)
+                  </option>
+                </optgroup>
+                <optgroup label="Social" data-i18n-attr="label:preset.groupSocial">
+                  <option value="square-social" data-i18n="preset.squareSocial">
+                    Social Square — 1080 × 1080 · 1:1
+                  </option>
+                  <option value="portrait-social" data-i18n="preset.portraitSocial">
+                    Social Portrait — 1080 × 1350 · 4:5
+                  </option>
+                  <option value="story-social" data-i18n="preset.storySocial">
+                    Story / Reel — 1080 × 1920 · 9:16
+                  </option>
+                  <option value="landscape-social" data-i18n="preset.landscapeSocial">
+                    Social Landscape — 1200 × 675 · 16:9
+                  </option>
+                  <option value="open-graph" data-i18n="preset.openGraph">
+                    Open Graph / Link Preview — 1200 × 630 · 1.90:1
+                  </option>
+                  <option value="youtube-thumb" data-i18n="preset.youtubeThumb">
+                    YouTube Thumbnail — 1280 × 720 · 16:9
+                  </option>
+                  <option value="pinterest-pin" data-i18n="preset.pinterestPin">
+                    Pinterest Pin — 1000 × 1500 · 2:3
+                  </option>
+                  <option value="profile-avatar" data-i18n="preset.profileAvatar">
+                    Profile Avatar — 800 × 800 (crop) · 1:1
+                  </option>
+                </optgroup>
+                <optgroup label="Email" data-i18n-attr="label:preset.groupEmail">
+                  <option value="email-hero" data-i18n="preset.emailHero">
+                    Email Hero — 600 px wide
+                  </option>
+                  <option value="email-retina" data-i18n="preset.emailRetina">
+                    Email Retina — 1200 px wide
+                  </option>
+                </optgroup>
+                <option value="custom" data-i18n="preset.custom">Custom</option>
+              </select>
+              <div class="preset-actions">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="savePresetBtn"
+                  type="button"
+                  title="Save current settings as a preset"
+                  data-i18n="preset.save"
+                  data-i18n-attr="title:preset.saveTitle"
+                >
+                  Save Preset
+                </button>
+                <button
+                  class="btn btn-icon btn-sm"
+                  id="deletePresetBtn"
+                  type="button"
+                  title="Delete saved preset"
+                  aria-label="Delete preset"
+                  data-i18n-attr="title:preset.deleteTitle;aria-label:preset.deleteAria"
+                  hidden
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    />
+                  </svg>
+                </button>
+                <button
+                  class="btn btn-icon btn-sm"
+                  id="exportPresetsBtn"
+                  type="button"
+                  title="Export presets as JSON"
+                  aria-label="Export presets"
+                  data-i18n-attr="title:preset.exportTitle;aria-label:preset.exportAria"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </button>
+                <button
+                  class="btn btn-icon btn-sm"
+                  id="importPresetsBtn"
+                  type="button"
+                  title="Import presets from JSON"
+                  aria-label="Import presets"
+                  data-i18n-attr="title:preset.importTitle;aria-label:preset.importAria"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                </button>
+                <input
+                  type="file"
+                  id="importPresetsFile"
+                  accept=".json"
+                  class="file-input-hidden"
+                  style="position: absolute; width: 1px; height: 1px; opacity: 0"
+                />
+              </div>
+            </div>
+
+            <!-- Step 2 advanced controls — folded by default (remembers its state) -->
+            <details class="wf-customize" id="customizePanel">
+              <summary class="wf-customize-summary">
+                <span class="wf-customize-summary-label" data-i18n="customize.summary"
+                  >Customize size, format &amp; quality</span
+                >
+                <svg
+                  class="wf-customize-chevron"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </summary>
+              <div class="wf-customize-body">
+                <!-- Column 1 · Size & mode (stacks under col-3 when narrow) -->
+                <div class="wf-col">
+                  <!-- Resize mode -->
+                  <fieldset class="setting-group">
+                    <legend class="setting-label" data-i18n="mode.legend">Mode</legend>
+                    <div class="radio-group" role="radiogroup">
+                      <label
+                        class="radio-option"
+                        data-tooltip="Keeps the original pixel dimensions — only converts format and reduces file weight"
+                        data-i18n-attr="data-tooltip:mode.originalTip"
+                      >
+                        <input type="radio" name="resizeMode" value="original" />
+                        <span data-i18n="mode.original">Keep original size (no resize)</span>
+                      </label>
+                      <label
+                        class="radio-option"
+                        data-tooltip="Scales image to fit inside the target width and height, preserving aspect ratio"
+                        data-i18n-attr="data-tooltip:mode.fitTip"
+                      >
+                        <input type="radio" name="resizeMode" value="fit-within" checked />
+                        <span data-i18n="mode.fit">Fit within box</span>
+                      </label>
+                      <label
+                        class="radio-option"
+                        data-tooltip="Scales the longest side to the target value, preserving aspect ratio"
+                        data-i18n-attr="data-tooltip:mode.longEdgeTip"
+                      >
+                        <input type="radio" name="resizeMode" value="max-long-edge" />
+                        <span data-i18n="mode.longEdge">Max long edge</span>
+                      </label>
+                      <label
+                        class="radio-option"
+                        data-tooltip="Resizes and center-crops to exact target dimensions"
+                        data-i18n-attr="data-tooltip:mode.exactTip"
+                      >
+                        <input type="radio" name="resizeMode" value="exact" />
+                        <span data-i18n="mode.exact">Exact dimensions (crop)</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <!-- Dimensions -->
+                  <div class="setting-group" id="dimensionsGroup">
+                    <label class="setting-label" data-i18n="dimensions.label"
+                      >Width / Height (px)</label
+                    >
+                    <div class="dimensions-row">
+                      <div class="dimension-input">
+                        <label for="targetWidth" class="dimension-label" data-i18n="dimensions.w"
+                          >W</label
+                        >
+                        <input
+                          type="number"
+                          id="targetWidth"
+                          class="setting-input"
+                          value="1920"
+                          min="1"
+                          max="10000"
+                          aria-label="Target width in pixels"
+                          data-i18n-attr="aria-label:dimensions.widthAria"
+                        />
+                      </div>
+                      <span class="dimension-separator" id="dimensionSep" aria-hidden="true"
+                        >&times;</span
+                      >
+                      <div class="dimension-input">
+                        <label for="targetHeight" class="dimension-label" data-i18n="dimensions.h"
+                          >H</label
+                        >
+                        <input
+                          type="number"
+                          id="targetHeight"
+                          class="setting-input"
+                          value="1080"
+                          min="1"
+                          max="10000"
+                          aria-label="Target height in pixels"
+                          data-i18n-attr="aria-label:dimensions.heightAria"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- /.wf-col (Size & mode) -->
+
+                <!-- Column 2 · Output (spans the right column when wide) -->
+                <div class="wf-col">
+                  <!-- ═══ OUTPUT section ═══ -->
+                  <h3 class="section-heading" data-i18n="output.heading">Output</h3>
+
+                  <!-- Format + Quality pair up on one row when the panel is wide
+                       (see .output-pair); they stack on narrow/single-column. -->
+                  <div class="output-pair">
+                    <!-- Output format -->
+                    <div class="setting-group">
+                      <label for="outputFormat" class="setting-label" data-i18n="output.formatLabel"
+                        >Format</label
+                      >
+                      <select id="outputFormat" class="setting-select">
+                        <option value="jpeg" selected>JPEG</option>
+                        <option value="png">PNG</option>
+                        <option value="webp">WebP</option>
+                        <option value="avif">AVIF</option>
+                        <option value="gif">GIF</option>
+                      </select>
+                    </div>
+
+                    <!-- JPEG quality -->
+                    <div class="setting-group" id="qualityGroup">
+                      <label for="qualitySlider" class="setting-label">
+                        <span data-i18n="output.qualityLabel">Quality:</span>
+                        <span id="qualityValue">82</span>
+                      </label>
+                      <input
+                        type="range"
+                        id="qualitySlider"
+                        class="setting-range"
+                        min="60"
+                        max="95"
+                        value="82"
+                        aria-valuemin="60"
+                        aria-valuemax="95"
+                        aria-valuenow="82"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Target file size (Smart Compression) -->
+                  <div class="setting-group" id="targetSizeGroup">
+                    <label
+                      class="checkbox-option"
+                      data-tooltip="Iteratively adjusts quality to hit a target file size (JPEG/WebP/AVIF only)"
+                      data-i18n-attr="data-tooltip:output.targetSizeTip"
+                    >
+                      <input type="checkbox" id="targetSizeEnabled" />
+                      <span data-i18n="output.targetSize">Target file size</span>
+                    </label>
+                    <div class="target-size-row" id="targetSizeRow" hidden>
+                      <input
+                        type="number"
+                        id="targetSizeKB"
+                        class="setting-input setting-input-sm"
+                        value="500"
+                        min="10"
+                        max="50000"
+                        aria-label="Target file size in KB"
+                        data-i18n-attr="aria-label:output.targetSizeAria"
+                      />
+                      <span class="setting-hint-inline">KB</span>
+                    </div>
+                  </div>
+
+                  <!-- Filename pattern -->
+                  <div class="setting-group">
+                    <label
+                      for="filenamePattern"
+                      class="setting-label"
+                      data-i18n="output.filenameLabel"
+                      >Filename Pattern</label
+                    >
+                    <input
+                      type="text"
+                      id="filenamePattern"
+                      class="setting-input"
+                      value="{name}-web"
+                      placeholder="{name}-web"
+                    />
+                    <span class="setting-hint" id="patternPreview"></span>
+                    <span class="setting-hint setting-hint-muted" data-i18n="output.filenameTokens"
+                      >Tokens: {name} {width} {height} {preset} {format} {breakpoint}</span
+                    >
+                  </div>
+
+                  <!-- Responsive Export (Multi-Size) -->
+                  <div class="setting-group">
+                    <label
+                      class="checkbox-option"
+                      data-tooltip="Generate multiple size variants from each image, bundled as a ZIP"
+                      data-i18n-attr="data-tooltip:output.multiSizeTip"
+                    >
+                      <input type="checkbox" id="responsiveEnabled" />
+                      <span data-i18n="output.multiSize">Multi-size export</span>
+                    </label>
+                    <div id="responsiveOptions" hidden>
+                      <label
+                        for="responsivePreset"
+                        class="setting-label setting-label-sm"
+                        data-i18n="output.breakpointLabel"
+                        >Breakpoint set</label
+                      >
+                      <select id="responsivePreset" class="setting-select">
+                        <option value="web-standard" data-i18n="output.bpWebStandard">
+                          Web Standard (320, 640, 1024, 1920)
+                        </option>
+                        <option value="retina-web" data-i18n="output.bpRetina">
+                          Retina Web (640, 1280, 1920, 2560)
+                        </option>
+                        <option value="thumbnails" data-i18n="output.bpThumbnails">
+                          Thumbnails (100, 200, 400, 800)
+                        </option>
+                        <option value="social-media" data-i18n="output.bpSocial">
+                          Social Media (400, 800, 1080, 1200)
+                        </option>
+                        <option value="custom-bp" data-i18n="output.bpCustom">Custom</option>
+                      </select>
+                      <div id="responsiveCustomRow" hidden>
+                        <input
+                          type="text"
+                          id="responsiveCustomSizes"
+                          class="setting-input"
+                          placeholder="e.g. 320, 640, 1024, 1920"
+                          aria-label="Custom breakpoint sizes"
+                          data-i18n-attr="placeholder:output.customSizesPlaceholder;aria-label:output.customSizesAria"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- /.wf-col (Output) -->
+
+                <!-- Column 3 · Processing (left column, beneath Size & mode) -->
+                <div class="wf-col">
+                  <!-- ═══ PROCESSING section ═══ -->
+                  <h3 class="section-heading" data-i18n="processing.heading">Processing</h3>
+
+                  <!-- Metadata -->
+                  <div class="setting-group">
+                    <label
+                      class="checkbox-option"
+                      data-tooltip="Removes camera info, GPS, and other metadata from output"
+                      data-i18n-attr="data-tooltip:processing.stripExifTip"
+                    >
+                      <input type="checkbox" id="stripMetadata" checked />
+                      <span data-i18n="processing.stripExif">Strip EXIF metadata</span>
+                    </label>
+                  </div>
+
+                  <!-- Upscale guard -->
+                  <div class="setting-group">
+                    <label
+                      class="checkbox-option"
+                      data-tooltip="Prevents output from exceeding source dimensions"
+                      data-i18n-attr="data-tooltip:processing.neverUpscaleTip"
+                    >
+                      <input type="checkbox" id="neverUpscale" checked />
+                      <span data-i18n="processing.neverUpscale">Never upscale images</span>
+                    </label>
+                  </div>
+
+                  <!-- Reset settings -->
+                  <div class="setting-group">
+                    <button
+                      class="btn btn-secondary btn-sm"
+                      id="resetSettingsBtn"
+                      type="button"
+                      data-tooltip="Clear saved settings and revert to defaults"
+                      data-i18n="processing.reset"
+                      data-i18n-attr="data-tooltip:processing.resetTip"
+                    >
+                      Reset to Defaults
+                    </button>
+                  </div>
+                </div>
+                <!-- /.wf-col (Processing) -->
+              </div>
+              <!-- /.wf-customize-body -->
+            </details>
+          </div>
+          <!-- /.settings-scroll -->
+
+          <!-- Step 3 · Export (pinned at the foot of the sidebar) -->
+          <div class="wf-step-export">
+            <div class="wf-step-head">
+              <span class="wf-step-num idle" id="step3Num" aria-hidden="true">3</span>
+              <h2 class="wf-step-title idle" id="step3Title" data-i18n="step3.title">Export</h2>
+            </div>
+            <div class="wf-export-actions">
+              <button
+                class="btn btn-success"
+                id="exportStep3Btn"
+                type="button"
+                disabled
+                data-tooltip="Download all processed images"
+                data-i18n="step3.download"
+                data-i18n-attr="data-tooltip:step3.downloadTip"
+              >
+                Download
+              </button>
+              <button
+                class="btn btn-secondary"
+                id="exportZipStep3Btn"
+                type="button"
+                disabled
+                data-tooltip="Download all images as a single ZIP"
+                data-i18n="step3.zip"
+                data-i18n-attr="data-tooltip:step3.zipTip"
+              >
+                ZIP
+              </button>
+            </div>
+            <p class="wf-export-meta" id="exportMeta" data-i18n="step3.meta">Ready after step 1</p>
+          </div>
+        </aside>
+
+        <!-- Content area -->
+        <main class="content-area" id="contentArea">
+          <!-- Empty-state hero (shown until the first image is loaded). Mutually
+               exclusive with #previewArea — toggled by show/hidePreviewArea(). -->
+          <section
+            class="content-empty"
+            id="contentEmpty"
+            aria-label="Get started"
+            data-i18n-attr="aria-label:empty.aria"
+          >
+            <div class="content-empty-inner">
+              <div
+                class="content-empty-drop"
+                id="contentEmptyDrop"
+                role="button"
+                tabindex="0"
+                aria-label="Drop images here or click to choose files"
+                data-i18n-attr="aria-label:empty.dropAria"
+              >
+                <svg
+                  class="content-empty-icon"
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                <h2 class="content-empty-title" data-i18n="empty.title">Drop images to resize</h2>
+                <p class="content-empty-sub" data-i18n-html="empty.sub">
+                  They never leave your browser. Or press
+                  <kbd class="content-empty-kbd">⌘O</kbd> to choose files.
+                </p>
+              </div>
+              <div
+                class="content-empty-chips"
+                role="group"
+                aria-label="Start with a preset"
+                data-i18n-attr="aria-label:empty.chipsAria"
+              >
+                <button
+                  class="content-empty-chip"
+                  type="button"
+                  data-preset="original"
+                  data-i18n="empty.chipConvert"
+                >
+                  Convert &amp; compress
+                </button>
+                <button
+                  class="content-empty-chip"
+                  type="button"
+                  data-preset="full-hd"
+                  data-i18n="empty.chipFullHd"
+                >
+                  Full HD
+                </button>
+                <button
+                  class="content-empty-chip"
+                  type="button"
+                  data-preset="square-social"
+                  data-i18n="empty.chipSquare"
+                >
+                  Social Square
+                </button>
+                <button
+                  class="content-empty-chip"
+                  type="button"
+                  data-preset="email-hero"
+                  data-i18n="empty.chipEmail"
+                >
+                  Email Hero
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Preview area (hidden until images are loaded) -->
+          <section
+            class="preview-area"
+            id="previewArea"
+            hidden
+            aria-label="Processed images"
+            data-i18n-attr="aria-label:preview.aria"
+          >
+            <div class="preview-header">
+              <h2 class="panel-heading" data-i18n="preview.heading">Preview</h2>
+              <div
+                class="preview-actions"
+                role="toolbar"
+                aria-label="Image actions"
+                data-i18n-attr="aria-label:preview.actionsAria"
+              >
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="selectAllBtn"
+                  type="button"
+                  hidden
+                  data-i18n="preview.selectAll"
+                >
+                  Select All
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="deselectAllBtn"
+                  type="button"
+                  hidden
+                  data-i18n="preview.deselectAll"
+                >
+                  Deselect All
+                </button>
+                <button
+                  class="btn btn-secondary"
+                  id="clearAllBtn"
+                  type="button"
+                  data-tooltip="Remove all images from the queue"
+                  data-i18n="preview.clearAll"
+                  data-i18n-attr="data-tooltip:preview.clearAllTip"
+                >
+                  Clear All
+                </button>
+                <button
+                  class="btn btn-secondary"
+                  id="exportResponsiveBtn"
+                  type="button"
+                  data-tooltip="Export all images at multiple sizes as a ZIP"
+                  data-i18n="preview.responsiveZip"
+                  data-i18n-attr="data-tooltip:preview.responsiveZipTip"
+                  hidden
+                >
+                  Responsive ZIP
+                </button>
+                <button
+                  class="btn btn-secondary"
+                  id="exportZipBtn"
+                  type="button"
+                  data-tooltip="Export all images as a single ZIP archive"
+                  data-i18n="preview.downloadZip"
+                  data-i18n-attr="data-tooltip:preview.downloadZipTip"
+                >
+                  Download ZIP
+                </button>
+                <button
+                  class="btn btn-primary"
+                  id="exportBtn"
+                  type="button"
+                  data-tooltip="Download all processed images individually"
+                  data-i18n="preview.download"
+                  data-i18n-attr="data-tooltip:preview.downloadTip"
+                >
+                  Download
+                </button>
+              </div>
+            </div>
+
+            <!-- Batch progress bar (hidden until batch processing) -->
+            <div
+              class="progress-bar-container"
+              id="progressBar"
+              hidden
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+              aria-label="Batch processing progress"
+              data-i18n-attr="aria-label:preview.progressAria"
+            >
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progressFill" style="width: 0%"></div>
+              </div>
+              <span class="progress-bar-label" id="progressLabel">0 / 0</span>
+            </div>
+
+            <!--
+              Bulk-action toolbar (Phase 3b).
+              Appears when ≥ 1 card is selected via Shift / Cmd-Ctrl-click or
+              the "Select All" header button. Individual bulk action buttons
+              (rotate, flip, delete, download, ZIP) are appended by main.js
+              in tasks #12–#14.
+            -->
+            <div
+              class="bulk-toolbar"
+              id="bulkToolbar"
+              hidden
+              role="toolbar"
+              aria-label="Bulk actions for selected images"
+              data-i18n-attr="aria-label:bulk.aria"
+            >
+              <span class="bulk-toolbar-count" id="bulkToolbarCount" aria-live="polite"
+                >0 selected</span
+              >
+              <div class="bulk-toolbar-actions" id="bulkToolbarActions">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="bulkRotateCcwBtn"
+                  type="button"
+                  data-tooltip="Rotate selected images 90° counter-clockwise"
+                  aria-label="Rotate selected left"
+                  data-i18n-attr="data-tooltip:bulk.rotateLeftTip;aria-label:bulk.rotateLeftAria"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="1 4 1 10 7 10" />
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                  </svg>
+                  <span data-i18n="bulk.rotateLeft">Rotate Left</span>
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="bulkRotateCwBtn"
+                  type="button"
+                  data-tooltip="Rotate selected images 90° clockwise"
+                  aria-label="Rotate selected right"
+                  data-i18n-attr="data-tooltip:bulk.rotateRightTip;aria-label:bulk.rotateRightAria"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="23 4 23 10 17 10" />
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                  </svg>
+                  <span data-i18n="bulk.rotateRight">Rotate Right</span>
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="bulkFlipHBtn"
+                  type="button"
+                  data-tooltip="Mirror selected images horizontally"
+                  aria-label="Flip selected horizontally"
+                  data-i18n-attr="data-tooltip:bulk.flipHTip;aria-label:bulk.flipHAria"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="7 16 3 12 7 8" />
+                    <polyline points="17 8 21 12 17 16" />
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                  </svg>
+                  <span data-i18n="bulk.flipH">Flip H</span>
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="bulkFlipVBtn"
+                  type="button"
+                  data-tooltip="Mirror selected images vertically"
+                  aria-label="Flip selected vertically"
+                  data-i18n-attr="data-tooltip:bulk.flipVTip;aria-label:bulk.flipVAria"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="8 7 12 3 16 7" />
+                    <polyline points="16 17 12 21 8 17" />
+                    <line x1="12" y1="3" x2="12" y2="21" />
+                  </svg>
+                  <span data-i18n="bulk.flipV">Flip V</span>
+                </button>
+                <span class="bulk-toolbar-sep" aria-hidden="true"></span>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="bulkDownloadBtn"
+                  type="button"
+                  data-tooltip="Download selected images individually"
+                  aria-label="Download selected images"
+                  data-i18n-attr="data-tooltip:bulk.downloadTip;aria-label:bulk.downloadAria"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  <span data-i18n="bulk.download">Download</span>
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="bulkZipBtn"
+                  type="button"
+                  data-tooltip="Bundle selected images into a single ZIP archive"
+                  aria-label="Download selected images as ZIP"
+                  data-i18n-attr="data-tooltip:bulk.zipTip;aria-label:bulk.zipAria"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+                    />
+                    <line x1="12" y1="7" x2="12" y2="17" />
+                    <line x1="8" y1="12" x2="16" y2="12" />
+                  </svg>
+                  <span data-i18n="bulk.zip">ZIP</span>
+                </button>
+                <span class="bulk-toolbar-sep" aria-hidden="true"></span>
+                <button
+                  class="btn btn-danger btn-sm"
+                  id="bulkDeleteBtn"
+                  type="button"
+                  data-tooltip="Remove selected images from the queue (Delete / Backspace)"
+                  aria-label="Delete selected images"
+                  data-i18n-attr="data-tooltip:bulk.deleteTip;aria-label:bulk.deleteAria"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    />
+                  </svg>
+                  <span data-i18n="bulk.delete">Delete</span>
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="bulkDeselectBtn"
+                  type="button"
+                  data-i18n="bulk.deselect"
+                >
+                  Deselect
+                </button>
+              </div>
+            </div>
+
+            <div class="preview-list" id="previewList" role="list" aria-label="Image preview cards">
+              <!-- Preview cards injected here by preview.js -->
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <!-- Footer -->
+      <footer class="app-footer">
+        <nav class="footer-links" aria-label="Site links">
+          <button type="button" class="footer-link" id="privacyLink" data-i18n="footer.privacy">
+            Privacy
+          </button>
+          <span class="footer-sep" aria-hidden="true">&middot;</span>
+          <a
+            class="footer-link"
+            href="https://ko-fi.com/321enterprise"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-i18n="footer.support"
+            >Support</a
+          >
+          <span class="footer-sep" aria-hidden="true">&middot;</span>
+          <a
+            class="footer-link"
+            href="mailto:office@321enterprise.com?subject=PixelGnome%20feedback"
+            data-i18n="footer.feedback"
+            >Feedback</a
+          >
+          <span class="footer-sep" aria-hidden="true">&middot;</span>
+          <button
+            type="button"
+            class="footer-link"
+            id="cookieSettingsLink"
+            data-i18n="footer.cookies"
+          >
+            Cookie settings
+          </button>
+          <span class="footer-sep" aria-hidden="true">&middot;</span>
+          <button
+            type="button"
+            class="footer-link footer-version"
+            id="footerVersion"
+            title="View changelog"
+            aria-label="View changelog"
+            data-i18n-attr="title:footer.versionTitle;aria-label:footer.versionAria"
+          >
+            v0.23.0-rc
+          </button>
+        </nav>
+        <p class="footer-credit" data-i18n-html="footer.credit">
+          A tool by
+          <a href="https://321enterprise.com/" target="_blank" rel="noopener noreferrer"
+            >321Enterprise</a
+          >. Need a custom browser tool like this?
+          <a href="https://321enterprise.com/" target="_blank" rel="noopener noreferrer"
+            >Get in touch</a
+          >.
+        </p>
+      </footer>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

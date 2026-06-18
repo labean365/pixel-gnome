@@ -1,0 +1,35 @@
+v0.21.0-rc — Italiano: multi-language support (EN + IT)
+
+Release candidate. Adds a framework-free i18n layer and a full Italian
+translation, switchable via a new globe-icon dropdown in the header.
+Plan: docs/i18n-Plan-2026-06.md. Native-review sheet:
+docs/i18n-Italian-Review.md.
+
+i18n runtime
+- New src/modules/i18n.js (~50 lines): t(key, vars) with {placeholder}
+  interpolation, {one/other} pluralization, English fallback.
+- Dictionaries src/locales/en.js (source of truth) + it.js, bundled at
+  build time so the single-file build stays self-contained / offline.
+- Pre-paint <head> script sets <html lang> before first paint (no flash);
+  lives outside the analytics markers so it survives the single-file strip.
+- Language stored in localStorage (pixelgnome-lang); first visit detects
+  navigator.language.
+
+UI
+- Globe-icon language switcher in the header (English / Italiano),
+  keyboard- and screen-reader-accessible.
+- Static markup via data-i18n / data-i18n-attr / data-i18n-html;
+  dynamic strings (toasts, announcements, JS templates) via t().
+
+Coverage
+- Whole main screen + resize/export flow, preview cards, crop/image
+  editor, Help, Privacy, cookie-consent, History.
+- Changelog entries intentionally kept English (tab label translated).
+
+Scope
+- Client-side toggle only; SEO stays English-focused. Per-locale /it/
+  URLs + hreflang deferred (no rework — dictionaries already exist).
+- Italian is a careful draft pending native review.
+
+Verified: 351 i18n keys, EN/IT parity; lint 0 errors; multi-file and
+single-file builds pass; footer reads v0.21.0-rc; Italian bundled.
