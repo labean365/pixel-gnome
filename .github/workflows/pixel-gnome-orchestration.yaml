@@ -14,6 +14,10 @@ on:
 jobs:
   retrieve-project:
     name: check readiness
+    # Only run the IONOS deploy chain on the canonical repo. Forks lack the
+    # IONOS_API_KEY secret, so without this guard every push to a fork would
+    # trigger a failing Actions run.
+    if: ${{ github.repository == 'labean365/pixel-gnome' }}
     runs-on: ubuntu-latest
     outputs:
       deployment-enabled: ${{ fromJson(steps.project.outputs.info).deployment-enabled }}
