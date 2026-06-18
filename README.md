@@ -25,7 +25,7 @@ A lightweight, drag-and-drop image resizing tool that runs entirely in the brows
 ## Tech stack
 
 - **Build:** [Vite](https://vitejs.dev/) 8 with `vite-plugin-singlefile` for the portable HTML build
-- **Runtime deps:** [`heic-to`](https://www.npmjs.com/package/heic-to) for HEIC decoding, [`jszip`](https://stuk.github.io/jszip/) for ZIP export
+- **Runtime deps:** [`heic-to`](https://www.npmjs.com/package/heic-to) for HEIC decoding, [`jszip`](https://stuk.github.io/jszip/) for ZIP export, and [`mupdf`](https://www.npmjs.com/package/mupdf) (AGPL) for client-side PDF optimization (lazy-loaded on demand; see [NOTICE](./NOTICE))
 - **Tooling:** ESLint 9, Prettier 3
 - **Node:** `>=20.19` (see `.nvmrc`)
 

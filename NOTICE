@@ -1,0 +1,21 @@
+PixelGnome
+Copyright (C) 2026 321Enterprise
+
+This program is licensed under the GNU Affero General Public License,
+version 3 or later. See the LICENSE file for the full text.
+
+------------------------------------------------------------------------
+Third-party software
+------------------------------------------------------------------------
+
+MuPDF  —  https://mupdf.com  /  https://github.com/ArtifexSoftware/mupdf.js
+  Copyright (C) 2006-2026 Artifex Software, Inc.
+  Licensed under the GNU Affero General Public License, version 3.
+  Used (via the "mupdf" npm package) for client-side PDF optimization.
+  MuPDF is also available from Artifex under a commercial license.
+
+heic-to  —  https://www.npmjs.com/package/heic-to
+  MIT License. Used for client-side HEIC/HEIF decoding.
+
+JSZip  —  https://stuk.github.io/jszip/
+  Dual-licensed MIT or GPLv3. Used for client-side ZIP export of batches.
