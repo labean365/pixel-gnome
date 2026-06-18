@@ -40,6 +40,10 @@ jobs:
         env:
           CI: true
           SITE_URL: ${{ inputs.site-url }}
+          # Injected from a GitHub repo variable so the GTM container id stays out
+          # of committed source. Empty for forks (they don't inherit this var), so
+          # their builds ship with analytics disabled.
+          VITE_GTM_ID: ${{ vars.VITE_GTM_ID }}
         run: npm run build
 
 # Please do not touch the following action

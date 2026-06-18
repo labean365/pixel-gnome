@@ -9,6 +9,12 @@ export default defineConfig({
   // copying the public/ folder (icons, og-image, robots.txt, sitemap.xml) —
   // those are server-root concepts that don't apply to a file opened from disk.
   publicDir: false,
+  // Force the GTM container id empty in the portable build regardless of the
+  // build environment. The inline GTM loader is stripped below, so this build is
+  // network-silent anyway; this also keeps the id string out of the bundled JS.
+  define: {
+    'import.meta.env.VITE_GTM_ID': JSON.stringify(''),
+  },
   plugins: [
     viteSingleFile(),
     {

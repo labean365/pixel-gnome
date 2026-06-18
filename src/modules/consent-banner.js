@@ -23,6 +23,12 @@ import { t } from './i18n.js';
 
 const STORAGE_KEY = 'pixeldrop-consent'; // 'granted' | 'denied' | null (undecided)
 
+// GTM container id, injected at build time from the VITE_GTM_ID env var (set in
+// the Deploy Now build via a GitHub repo variable). Empty in clones/forks and in
+// local builds without the var — in which case the banner never shows and GTM is
+// never loaded, so a clone can't report into this site's analytics container.
+const GTM_ID = import.meta.env.VITE_GTM_ID || '';
+
 let bannerEl = null;
 let gtmLoaded = false;
 
@@ -32,9 +38,10 @@ let gtmLoaded = false;
  *   reopens the banner so the visitor can change their choice anytime.
  */
 export function initConsentBanner(settingsTrigger) {
-  // No analytics on this page (e.g. the portable single-file build) → nothing
-  // to consent to and no GTM to load.
-  if (typeof window.gtag !== 'function') return;
+  // No analytics on this page → nothing to consent to and no GTM to load. True
+  // for the portable single-file build (the inline gtag snippet is stripped) and
+  // for any build without VITE_GTM_ID configured (clones/forks/local builds).
+  if (typeof window.gtag !== 'function' || !GTM_ID) return;
 
   if (settingsTrigger) {
     settingsTrigger.addEventListener('click', (e) => {
@@ -117,7 +124,7 @@ function declineConsent() {
 function loadGtm() {
   if (gtmLoaded) return;
   gtmLoaded = true;
-  if (typeof window.__pdLoadGtm === 'function') window.__pdLoadGtm();
+  if (typeof window.__pdLoadGtm === 'function') window.__pdLoadGtm(GTM_ID);
 }
 
 function storeChoice(value) {

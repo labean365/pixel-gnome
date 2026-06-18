@@ -54,9 +54,12 @@
         });
       })();
       // GTM loader — DEFINED but not executed. consent-banner.js calls this only
-      // after the visitor opts in. Living here (not in the JS bundle) keeps the
-      // GTM URL/ID out of the portable single-file build, which strips this block.
-      window.__pdLoadGtm = function () {
+      // after the visitor opts in, passing the container id. The id is injected at
+      // build time from VITE_GTM_ID (see consent-banner.js) and is deliberately NOT
+      // hardcoded here, so clones/forks build with analytics disabled. This block is
+      // also stripped entirely from the portable single-file build.
+      window.__pdLoadGtm = function (id) {
+        if (!id) return;
         (function (w, d, s, l, i) {
           w[l] = w[l] || [];
           w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
@@ -66,7 +69,7 @@
           j.async = true;
           j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
           f.parentNode.insertBefore(j, f);
-        })(window, document, 'script', 'dataLayer', 'GTM-M239PR2X');
+        })(window, document, 'script', 'dataLayer', id);
       };
     </script>
     <!-- END analytics -->
