@@ -1,7 +1,7 @@
 v0.20.0-rc — Mobile & small-window responsiveness
 
 Release candidate. Headline work is the mobile/tablet responsiveness
-pass (docs/Mobile-Responsiveness-Plan.md); also rolls up the previously
+pass; also rolls up the previously
 unreleased Customize two-column layout, landing tuning, and header
 changes. CSS-only and breakpoint-scoped — desktop layout unchanged.
 

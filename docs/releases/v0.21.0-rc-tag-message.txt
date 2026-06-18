@@ -2,8 +2,6 @@ v0.21.0-rc — Italiano: multi-language support (EN + IT)
 
 Release candidate. Adds a framework-free i18n layer and a full Italian
 translation, switchable via a new globe-icon dropdown in the header.
-Plan: docs/i18n-Plan-2026-06.md. Native-review sheet:
-docs/i18n-Italian-Review.md.
 
 i18n runtime
 - New src/modules/i18n.js (~50 lines): t(key, vars) with {placeholder}

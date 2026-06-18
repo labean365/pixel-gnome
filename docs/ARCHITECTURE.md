@@ -12,11 +12,7 @@ PixelDrop is a client-only image resizer, converter, and batch compressor. No ba
 pixel-drop/
 ├── docs/
 │   ├── ARCHITECTURE.md        # This file — structure, patterns, conventions
-│   ├── BUILD-PLAN.md          # Living roadmap and phase tracker
-│   ├── DESIGN-REVIEW.md       # Visual/UX review notes
-│   ├── Product-Review.md      # Original spec review and recommendations
-│   ├── product-spec.txt       # Source-of-truth product brief
-│   └── fixtures/              # Sample payloads and test data for dev
+│   └── releases/              # Release notes and tag messages
 │
 ├── src/
 │   ├── index.html             # Main HTML shell — drop zone, panels, modals

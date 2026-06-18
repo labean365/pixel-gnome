@@ -50,7 +50,7 @@ export const PDF_ENGINE = 'mupdf';
 
 class NotImplementedError extends Error {
   constructor(method) {
-    super(`pdf-engine: "${method}" is not implemented yet. See docs/PDF-Toolkit-Spec-2026-06.md.`);
+    super(`pdf-engine: "${method}" is not implemented yet.`);
     this.name = 'NotImplementedError';
   }
 }

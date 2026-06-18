@@ -4,10 +4,10 @@ Maintenance / infrastructure release candidate. Core image workflow
 unchanged; one visible editor fix.
 
 Deployment & CI
-- Continuous deployment via IONOS Deploy Now: pixelgnome.com builds and
+- Continuous deployment: pixelgnome.com builds and
   deploys automatically from the GitHub repo on every push to main
   (GitHub Actions -> npm ci -> npm run build -> publish dist/),
-  replacing the manual dist/ upload. Per-release deploy-IONOS.md guide
+  replacing the manual dist/ upload. Per-release deploy guide
   retired. README gains a Deployment section.
 - Fixed the generated build workflow (no install step -> "vite: not
   found"): added npm ci + npm caching.

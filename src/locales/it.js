@@ -1,7 +1,7 @@
 /**
  * it.js — Italian locale.
  *
- * ⚠️ DRAFT — pending native-speaker review (see docs/i18n-Italian-Review.md).
+ * ⚠️ DRAFT — pending native-speaker review.
  * Tone: concise, impersonal/formal register typical of Italian software UI.
  * Format names (JPEG, WebP…), brand names, and EXIF are kept untranslated.
  * Keep this key tree in sync with en.js.

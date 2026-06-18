@@ -1,9 +1,7 @@
 v0.18.0-rc — presets & guided workflow
 
 Release candidate for the preset-system overhaul, exact-mode crop
-preview, and the three-phase guided-workflow redesign. See
-docs/Preset-System-Spec-2026-06.md and
-docs/Guided-Workflow-Spec-2026-06.md.
+preview, and the three-phase guided-workflow redesign.
 
 Presets — library + fit-vs-crop correctness
 - Expanded to 14 built-ins, grouped via <optgroup> into Web / Social

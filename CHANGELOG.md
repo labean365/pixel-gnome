@@ -16,7 +16,7 @@ A maintenance / infrastructure release candidate. The core image workflow is unc
 
 #### Deployment & CI
 
-- **Continuous deployment via IONOS Deploy Now.** pixelgnome.com now builds and deploys automatically from the GitHub repo on every push to `main` (GitHub Actions → `npm ci` → `npm run build` → publish `dist/`), replacing the previous manual `dist/` upload. The workflow lives in `.github/workflows/` (only `pixel-gnome-build.yaml` is customized); a new **Deployment** section in `README.md` documents the flow.
+- **Continuous deployment.** pixelgnome.com now builds and deploys automatically from the GitHub repo on every push to `main` (GitHub Actions → `npm ci` → `npm run build` → publish `dist/`), replacing the previous manual `dist/` upload. A **Deployment** section in `README.md` documents the build.
 - **CI build pipeline fixes.** The generated build workflow had no dependency-install step (`vite: not found`); added `npm ci` plus npm caching. `npm ci` then surfaced a pre-existing peer conflict — `@eslint/js@^10` against `eslint@9` — fixed by pinning `@eslint/js` to `^9` (resolves to 9.39.4) and regenerating the lockfile, so the install runs clean without `--legacy-peer-deps`.
 
 #### Fixes
@@ -56,7 +56,7 @@ A maintenance / infrastructure release candidate. The core image workflow is unc
 - **Static markup is translated via `data-i18n` / `data-i18n-attr` / `data-i18n-html` hooks** scanned on load (`index.html`), with the English text retained inline as the SEO default. Dynamic strings — toasts, screen-reader announcements, and JS-built templates — call `t()` directly.
 - **Coverage.** The entire main screen and resize → export workflow (`main.js`, `settings.js`, `preview.js`), the crop / image editor (`crop-modal.js`, `crop-colors.js`), and the Help, Privacy, cookie-consent, and History surfaces are all translated. The **Changelog** entries are intentionally kept in English as a historical dev record (the tab label itself is translated).
 - **SEO unchanged for now.** This release is a client-side language toggle only — discovery stays English-focused. Per-locale `/it/` URLs + `hreflang` remain a deferred, no-rework follow-up (the dictionaries already exist).
-- **Italian copy is a careful draft pending a native-speaker review** — see `docs/i18n-Italian-Review.md` (full EN→IT table). Plan/architecture in `docs/i18n-Plan-2026-06.md`.
+- **Italian copy is a careful draft pending a native-speaker review.**
 - **Known limitation:** switching language mid-session re-translates the static chrome and re-rendered modals immediately, but preview cards already on screen keep their original-language labels until reprocessed. First-load detection (the common case) is fully correct.
 
 ## [v0.20.0-rc] — 2026-06-07
@@ -144,7 +144,6 @@ A maintenance / infrastructure release candidate. The core image workflow is unc
 - **Empty preview panel could render on load:** `.preview-area` set `display: flex` with no `[hidden]` guard and there was no global one, so its `hidden` attribute was overridden by the cascade. Added `.preview-area[hidden] { display: none }`, which also guarantees the hero and preview are mutually exclusive.
 
 ### Docs
-- `docs/Preset-System-Spec-2026-06.md`, `docs/Guided-Workflow-Spec-2026-06.md`, and `docs/mockups/guided-workflow.html` capture the design and decisions for this release.
 
 ## [v0.17.1-rc] — 2026-05-20
 
@@ -414,7 +413,7 @@ Groups the audit-driven polish (3a), bulk-action plumbing (3b), and card reorder
 
 ### Planning
 - Initial product spec authored
-- Product spec review completed (see Product-Review.md)
+- Product spec review completed
 - Build plan created with 4-phase roadmap
 - Architecture reference documented
 - Tech stack decisions finalized: Vanilla JS + Vite + Canvas API + heic-to + JSZip

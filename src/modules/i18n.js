@@ -2,7 +2,7 @@
  * i18n.js
  * Tiny, dependency-free internationalization runtime for PixelGnome.
  *
- * Design (see docs/i18n-Plan-2026-06.md):
+ * Design:
  *  - Locale dictionaries are plain nested objects, bundled at build time
  *    (so the portable single-file build stays self-contained — no fetches).
  *  - t(key, vars) resolves a dotted key, interpolates {placeholders}, and

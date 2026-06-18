@@ -1,4 +1,4 @@
-# PixelGnome cache policy — served via IONOS Apache.
+# PixelGnome cache policy — for Apache static hosting.
 #
 # Strategy: default every response to "revalidate on each load" so a new deploy
 # reaches returning visitors immediately (this also covers the bare "/" request,
