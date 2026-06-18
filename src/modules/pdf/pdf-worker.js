@@ -16,7 +16,7 @@
  *   OUT: { type: 'info',     id, info }
  *   OUT: { type: 'progress', id, done, total }      // emitted during optimize
  *   OUT: { type: 'result',   id, bytes, outputSize } // optimize result
- *   OUT: { type: 'preview',  id, bitmap }            // transferable ImageBitmap
+ *   OUT: { type: 'preview',  id, png, width, height } // transferable PNG bytes
  *   OUT: { type: 'error',    id, message }
  *
  * Worker globals (`self`, `postMessage`, `ImageBitmap`, etc.) come from the flat
@@ -52,8 +52,12 @@ self.onmessage = async function (e) {
       }
 
       case 'pdf-preview': {
-        const bitmap = await renderPagePreview(msg.bytes, msg.pageIndex, msg.scale ?? 1);
-        self.postMessage({ type: 'preview', id, bitmap }, [bitmap]);
+        const { png, width, height } = await renderPagePreview(
+          msg.bytes,
+          msg.pageIndex,
+          msg.scale ?? 0.3
+        );
+        self.postMessage({ type: 'preview', id, png, width, height }, [png.buffer]);
         break;
       }
 
