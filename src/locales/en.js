@@ -188,6 +188,7 @@ export default {
     privacy: 'Privacy',
     support: 'Support',
     feedback: 'Feedback',
+    source: 'Source',
     cookies: 'Cookie settings',
     versionTitle: 'View changelog',
     versionAria: 'View changelog',

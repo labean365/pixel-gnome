@@ -2,6 +2,10 @@
 
 A lightweight, drag-and-drop image resizing tool that runs entirely in the browser. Drop in high-resolution photos, configure presets, and export web-ready images — no installation, no upload, fully offline.
 
+**Privacy by design:** every image is processed locally in your browser using the Canvas API and WebAssembly. Nothing is ever uploaded to a server — there is no backend. The source is open so you can verify that for yourself.
+
+> Live at **[pixelgnome.com](https://pixelgnome.com/)**. Pixel Gnome is an open example of the kind of custom browser tools built by **[321Enterprise](https://321enterprise.com/)** — need something similar? [Get in touch](https://321enterprise.com/).
+
 ## Features
 
 - Drag-and-drop batch image processing
@@ -116,4 +120,22 @@ See [CHANGELOG.md](./CHANGELOG.md). Current version: **0.23.0-rc**.
 
 ## License
 
-Private — all rights reserved.
+Copyright (C) 2026 321Enterprise.
+
+Pixel Gnome is free software: you can redistribute it and/or modify it under the
+terms of the **GNU Affero General Public License** as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. See [LICENSE](./LICENSE) for the full text.
+
+It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE. See the GNU AGPL for details.
+
+Because Pixel Gnome is delivered to your browser as source, the AGPL's network
+clause is satisfied directly: the corresponding source for the deployed version
+is this repository, also linked from the **Source** link in the app footer. If
+you run a modified version publicly, you must make your modified source
+available under the same license.
+
+The "Pixel Gnome" name and logo are trademarks of 321Enterprise and are not
+covered by the AGPL grant.

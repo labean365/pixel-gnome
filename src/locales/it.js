@@ -192,6 +192,7 @@ export default {
     privacy: 'Privacy',
     support: 'Supporto',
     feedback: 'Feedback',
+    source: 'Codice sorgente',
     cookies: 'Impostazioni cookie',
     versionTitle: 'Visualizza le novità',
     versionAria: 'Visualizza le novità',

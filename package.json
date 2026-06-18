@@ -3,6 +3,13 @@
   "private": true,
   "version": "0.23.0-rc",
   "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "author": "321Enterprise (https://321enterprise.com/)",
+  "homepage": "https://pixelgnome.com/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/labean365/pixel-gnome.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
