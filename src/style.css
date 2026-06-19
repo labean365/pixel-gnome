@@ -3989,3 +3989,84 @@ fieldset.setting-group legend.setting-label {
     animation: none;
   }
 }
+
+/* --- Merge mode: reorderable file list --- */
+.pdf-merge-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.pdf-merge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.pdf-merge-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.pdf-merge-pos {
+  flex: 0 0 auto;
+  min-width: 1.6em;
+  height: 1.6em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-accent);
+  border-radius: 50%;
+}
+
+.pdf-merge-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pdf-merge-name {
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdf-merge-sub {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.pdf-merge-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+}
+
+.pdf-merge-actions .btn-icon {
+  padding: var(--space-xs);
+  line-height: 1;
+}
+
+.pdf-merge-actions .btn-icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pdf-merge-add {
+  display: flex;
+}

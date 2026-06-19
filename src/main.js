@@ -929,8 +929,10 @@ async function handleNewFiles(files) {
   if (pdfs.length > 0) {
     if (!isPdfSupported()) {
       showToast(t('pdf.errorUnsupported'), 'error', 6000);
+    } else if (pdfs.length > 1) {
+      // Multiple PDFs → open the modal straight into Merge with all preloaded.
+      openPdfModal(pdfs[0], { mergeFiles: pdfs });
     } else {
-      if (pdfs.length > 1) showToast(t('pdf.onePerRun'), 'info', 6000);
       openPdfModal(pdfs[0]);
     }
     const images = files.filter((f) => !isPdfFile(f));

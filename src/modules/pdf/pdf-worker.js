@@ -15,6 +15,7 @@
  *   IN:  { type: 'pdf-preview',  id, bytes, pageIndex, scale }
  *   IN:  { type: 'pdf-extract',  id, bytes, pages }        // P2: pages to KEEP
  *   IN:  { type: 'pdf-split',    id, bytes, ranges }       // P2: page-index groups
+ *   IN:  { type: 'pdf-merge',    id, docs }                // P2: PDF byte arrays, in order
  *   OUT: { type: 'info',     id, info }
  *   OUT: { type: 'progress', id, done, total }      // emitted during optimize
  *   OUT: { type: 'result',   id, bytes, outputSize } // optimize / extract result
@@ -25,14 +26,14 @@
  * Worker globals (`self`, `postMessage`, `ImageBitmap`, etc.) come from the flat
  * ESLint config's worker-globals override for src/modules/**\/*-worker.js.
  *
- * STATUS: live. getInfo/optimize/renderPagePreview (P1) and extractPages/split
- * (P2 organize) are implemented in pdf-engine.js (MuPDF, Approach B) and wired to
- * the UI via pdf-ui.js. The remaining engine methods (merge/imagesToPdf/
+ * STATUS: live. getInfo/optimize/renderPagePreview (P1) and extractPages/split/
+ * merge (P2 organize + merge) are implemented in pdf-engine.js (MuPDF, Approach B)
+ * and wired to the UI via pdf-ui.js. The remaining engine methods (imagesToPdf/
  * pdfToImages) still throw NotImplementedError and surface via the 'error'
  * message.
  */
 
-import { getInfo, optimize, renderPagePreview, extractPages, split } from './pdf-engine.js';
+import { getInfo, optimize, renderPagePreview, extractPages, split, merge } from './pdf-engine.js';
 
 /**
  * Copy bytes into a fresh, transferable ArrayBuffer.
@@ -103,6 +104,17 @@ self.onmessage = async function (e) {
           { type: 'splitResult', id, parts, sizes },
           parts.map((p) => p.buffer)
         );
+        break;
+      }
+
+      case 'pdf-merge': {
+        // Combine multiple PDFs (msg.docs, in order) into one. The input buffers
+        // are structure-cloned (not transferred) so the caller's merge list stays
+        // intact for re-merging; only the result buffer is transferred back.
+        const out = toTransferable(await merge(msg.docs));
+        self.postMessage({ type: 'result', id, bytes: out, outputSize: out.byteLength }, [
+          out.buffer,
+        ]);
         break;
       }
 

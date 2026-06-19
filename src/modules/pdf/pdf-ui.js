@@ -10,6 +10,8 @@
  *   - Organize (P2): a page-thumbnail selection grid for extract / remove pages
  *     (→ one PDF) and split into multiple files (→ a ZIP via JSZip)
  *     (pdf-extract / pdf-split, reusing pdf-preview for thumbnails).
+ *   - Merge (P2): a reorderable list of PDFs (the open one + "Add PDFs") combined
+ *     top-to-bottom into one file (pdf-merge). Multi-PDF drops open here directly.
  *
  * Privacy: everything runs client-side. The multi-MB MuPDF wasm lives only
  * inside pdf-worker.js and is referenced via `new URL(... , import.meta.url)`,
@@ -23,7 +25,7 @@ import { t } from '../i18n.js';
 import { showToast } from '../toast.js';
 import { announce } from '../announcer.js';
 import { trackUrl, revokeUrl } from '../resource-tracker.js';
-import { trackPdfOptimized, trackPdfOrganized } from '../analytics.js';
+import { trackPdfOptimized, trackPdfOrganized, trackPdfMerged } from '../analytics.js';
 
 /**
  * Whether the PDF feature is compiled into this build. The single-file build
@@ -58,12 +60,19 @@ let currentPage = 0; // 0-based page shown in preview
 let busy = false; // an optimize/organize run is in flight
 
 // Organize-mode state.
-let mode = 'compress'; // 'compress' | 'organize'
+let mode = 'compress'; // 'compress' | 'organize' | 'merge'
 let organizeOp = 'extract'; // 'extract' | 'remove' | 'split'
 const selectedPages = new Set(); // 0-based indices selected in the page grid
 let gridBuilt = false; // page grid rendered yet (lazy on first Organize view)
 let thumbObserver = null; // IntersectionObserver for lazy thumbnails
 const thumbUrls = []; // object URLs for thumbnails (revoked on close)
+
+// Merge-mode state.
+let mergeList = []; // [{ id, name, size, bytes, pages }] in output order
+let mergeSeq = 0; // id generator for merge rows
+let mergeBuilt = false; // merge list seeded with the current PDF yet
+let initialMode = 'compress'; // mode to show once the modal has loaded
+let pendingMergeFiles = null; // extra dropped PDFs to preload into the merge list
 
 /* ------------------------------------------------------------------ */
 /* Worker plumbing                                                    */
@@ -146,10 +155,13 @@ function call(type, payload, onProgress) {
 /* ------------------------------------------------------------------ */
 
 /**
- * Open the PDF optimization modal for a single file.
+ * Open the PDF modal for a single file. When multiple PDFs are dropped, pass the
+ * full list via `opts.mergeFiles` to open straight into Merge mode with all of
+ * them preloaded (the `file` arg is the first/primary one shown in Compress).
  * @param {File} file
+ * @param {{ mergeFiles?: File[] }} [opts]
  */
-export async function openPdfModal(file) {
+export async function openPdfModal(file, opts = {}) {
   if (backdrop) return; // one at a time
 
   if (!isPdfSupported()) {
@@ -164,6 +176,12 @@ export async function openPdfModal(file) {
   organizeOp = 'extract';
   selectedPages.clear();
   gridBuilt = false;
+  mergeList = [];
+  mergeBuilt = false;
+  const extra = Array.isArray(opts.mergeFiles) ? opts.mergeFiles : null;
+  // Open into Merge when more than one PDF was provided.
+  initialMode = extra && extra.length > 1 ? 'merge' : 'compress';
+  pendingMergeFiles = initialMode === 'merge' ? extra : null;
 
   renderShell();
   setStatus(t('pdf.loading'), 'info', true);
@@ -183,6 +201,8 @@ export async function openPdfModal(file) {
     renderInfo();
     await showPreview(0);
     setStatus('');
+    // If opened for merge, switch once the primary PDF is loaded.
+    if (initialMode === 'merge') switchMode('merge');
   } catch (err) {
     setStatus(err?.message || t('pdf.errorGeneric'), 'error');
   }
@@ -216,6 +236,7 @@ function renderShell() {
         <div class="pdf-mode-switch" role="tablist" aria-label="${t('pdf.modeAria')}">
           <button class="pdf-mode-tab active" data-mode="compress" role="tab" aria-selected="true">${t('pdf.mode.compress')}</button>
           <button class="pdf-mode-tab" data-mode="organize" role="tab" aria-selected="false">${t('pdf.mode.organize')}</button>
+          <button class="pdf-mode-tab" data-mode="merge" role="tab" aria-selected="false">${t('pdf.mode.merge')}</button>
         </div>
 
         <!-- COMPRESS pane -->
@@ -299,6 +320,19 @@ function renderShell() {
 
           <div class="pdf-actions">
             <button class="btn btn-primary" data-action="organize" id="pdfOrganizeBtn">${t('pdf.org.build')}</button>
+          </div>
+        </div>
+
+        <!-- MERGE pane -->
+        <div class="pdf-pane pdf-pane-merge" id="pdfPaneMerge" hidden>
+          <p class="pdf-merge-hint">${t('pdf.merge.hint')}</p>
+          <ol class="pdf-merge-list" id="pdfMergeList"></ol>
+          <div class="pdf-merge-add">
+            <button type="button" class="pdf-linkbtn" data-action="add-pdfs">${t('pdf.merge.add')}</button>
+            <input type="file" id="pdfMergeInput" accept="application/pdf,.pdf" multiple hidden>
+          </div>
+          <div class="pdf-actions">
+            <button class="btn btn-primary" data-action="merge" id="pdfMergeBtn">${t('pdf.merge.build')}</button>
           </div>
         </div>
 
@@ -427,6 +461,30 @@ function wireEvents() {
   }
 
   byId('pdfOrganizeBtn').addEventListener('click', runOrganize);
+
+  // --- Merge mode ---
+  const addBtn = backdrop.querySelector('[data-action="add-pdfs"]');
+  const mergeInput = byId('pdfMergeInput');
+  if (addBtn && mergeInput) {
+    addBtn.addEventListener('click', () => mergeInput.click());
+    mergeInput.addEventListener('change', () => {
+      addMergeFiles([...mergeInput.files]);
+      mergeInput.value = ''; // allow re-picking the same file
+    });
+  }
+  const mergeListEl = byId('pdfMergeList');
+  if (mergeListEl) {
+    mergeListEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      const id = Number(btn.closest('.pdf-merge-item')?.dataset.id);
+      const act = btn.dataset.act;
+      if (act === 'up') moveMergeItem(id, -1);
+      else if (act === 'down') moveMergeItem(id, 1);
+      else if (act === 'remove') removeMergeItem(id);
+    });
+  }
+  byId('pdfMergeBtn').addEventListener('click', runMerge);
 }
 
 function onKeyDown(e) {
@@ -443,9 +501,10 @@ function syncQualityOutput() {
 /* Organize mode                                                      */
 /* ------------------------------------------------------------------ */
 
-/** Switch between the Compress and Organize panes. */
+/** Switch between the Compress, Organize, and Merge panes. */
 function switchMode(next) {
-  if (busy || (next !== 'compress' && next !== 'organize') || next === mode) return;
+  const valid = next === 'compress' || next === 'organize' || next === 'merge';
+  if (busy || !valid || next === mode) return;
   mode = next;
   backdrop.querySelectorAll('.pdf-mode-tab').forEach((tab) => {
     const on = tab.dataset.mode === mode;
@@ -454,13 +513,16 @@ function switchMode(next) {
   });
   const compress = byId('pdfPaneCompress');
   const organize = byId('pdfPaneOrganize');
+  const merge = byId('pdfPaneMerge');
   if (compress) compress.hidden = mode !== 'compress';
   if (organize) organize.hidden = mode !== 'organize';
+  if (merge) merge.hidden = mode !== 'merge';
 
   // Result from one mode shouldn't linger as a download for the other.
   hideDownload();
   setStatus('');
   if (mode === 'organize' && !gridBuilt) buildPageGrid();
+  if (mode === 'merge' && !mergeBuilt) initMergeList();
 }
 
 /** Apply the selected organize operation (extract / remove / split). */
@@ -705,9 +767,14 @@ async function finishSplitResult(parts, ranges) {
 
 /** Source filename without extension. */
 function stem() {
-  const name = srcFile?.name || 'document.pdf';
-  const dot = name.lastIndexOf('.');
-  return dot > 0 ? name.slice(0, dot) : name;
+  return stemOf(srcFile?.name);
+}
+
+/** Strip the extension from a filename (falls back to 'document'). */
+function stemOf(name) {
+  const n = name || 'document.pdf';
+  const dot = n.lastIndexOf('.');
+  return dot > 0 ? n.slice(0, dot) : n;
 }
 
 /** Show the (green, ready) download button for a generated blob. */
@@ -731,6 +798,139 @@ function hideDownload() {
   if (resultUrl) {
     revokeUrl(resultUrl);
     resultUrl = null;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Merge mode                                                         */
+/* ------------------------------------------------------------------ */
+
+/** Seed the merge list with the currently-open PDF, plus any dropped extras. */
+async function initMergeList() {
+  if (mergeBuilt) return;
+  mergeBuilt = true;
+  mergeList = [];
+  if (srcBytes && pdfInfo) {
+    mergeList.push({
+      id: ++mergeSeq,
+      name: srcFile.name,
+      size: srcFile.size,
+      bytes: srcBytes,
+      pages: pdfInfo.pageCount,
+    });
+  }
+  renderMergeList();
+  // Preload any additional files that came in via a multi-PDF drop (skip the
+  // first — it's already the open PDF above).
+  if (pendingMergeFiles && pendingMergeFiles.length > 1) {
+    await addMergeFiles(pendingMergeFiles.slice(1));
+  }
+  pendingMergeFiles = null;
+}
+
+/** Read + validate dropped/picked PDFs and append them to the merge list. */
+async function addMergeFiles(files) {
+  const pdfs = files.filter((f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name || ''));
+  if (pdfs.length === 0) return;
+  setStatus(t('pdf.merge.reading'), 'info', true);
+  let added = 0;
+  for (const file of pdfs) {
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const res = await call('pdf-info', { bytes }); // validates it's a real PDF
+      mergeList.push({
+        id: ++mergeSeq,
+        name: file.name,
+        size: file.size,
+        bytes,
+        pages: res.info.pageCount,
+      });
+      added++;
+    } catch {
+      showToast(t('pdf.merge.errFile', { name: file.name }), 'error', 5000);
+    }
+  }
+  setStatus('');
+  if (added) {
+    hideDownload();
+    renderMergeList();
+  }
+}
+
+function moveMergeItem(id, dir) {
+  const i = mergeList.findIndex((e) => e.id === id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= mergeList.length) return;
+  [mergeList[i], mergeList[j]] = [mergeList[j], mergeList[i]];
+  hideDownload();
+  renderMergeList();
+}
+
+function removeMergeItem(id) {
+  mergeList = mergeList.filter((e) => e.id !== id);
+  hideDownload();
+  renderMergeList();
+}
+
+function renderMergeList() {
+  const list = byId('pdfMergeList');
+  if (!list) return;
+  list.innerHTML = mergeList
+    .map(
+      (e, i) => `
+      <li class="pdf-merge-item" data-id="${e.id}">
+        <span class="pdf-merge-pos">${i + 1}</span>
+        <span class="pdf-merge-meta">
+          <span class="pdf-merge-name" title="${escapeHtml(e.name)}">${escapeHtml(e.name)}</span>
+          <span class="pdf-merge-sub">${t('pdf.pages', { count: e.pages })} · ${formatBytes(e.size)}</span>
+        </span>
+        <span class="pdf-merge-actions">
+          <button type="button" class="btn btn-icon" data-act="up" ${i === 0 ? 'disabled' : ''} aria-label="${t('pdf.merge.moveUp')}" title="${t('pdf.merge.moveUp')}">↑</button>
+          <button type="button" class="btn btn-icon" data-act="down" ${i === mergeList.length - 1 ? 'disabled' : ''} aria-label="${t('pdf.merge.moveDown')}" title="${t('pdf.merge.moveDown')}">↓</button>
+          <button type="button" class="btn btn-icon" data-act="remove" aria-label="${t('pdf.merge.remove', { name: e.name })}" title="${t('pdf.merge.removeShort')}">✕</button>
+        </span>
+      </li>`
+    )
+    .join('');
+  // Need at least two documents to merge.
+  const btn = byId('pdfMergeBtn');
+  if (btn && !busy) btn.disabled = mergeList.length < 2;
+  const total = mergeList.reduce((sum, e) => sum + e.pages, 0);
+  const hint = backdrop?.querySelector('.pdf-merge-hint');
+  if (hint) {
+    hint.textContent =
+      mergeList.length < 2
+        ? t('pdf.merge.hint')
+        : t('pdf.merge.summary', { files: mergeList.length, pages: total });
+  }
+}
+
+async function runMerge() {
+  if (busy || mergeList.length < 2) return;
+  busy = true;
+  const btn = byId('pdfMergeBtn');
+  if (btn) btn.disabled = true;
+  hideDownload();
+  setStatus(t('pdf.merge.building'), 'info', true);
+  try {
+    const docs = mergeList.map((e) => e.bytes);
+    const res = await call('pdf-merge', { docs });
+    const bytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes);
+    resultBytes = bytes;
+    const totalPages = mergeList.reduce((sum, e) => sum + e.pages, 0);
+    setStatus(
+      t('pdf.merge.done', { count: totalPages, size: formatBytes(bytes.length) }),
+      'success'
+    );
+    announce(t('pdf.merge.done', { count: totalPages, size: formatBytes(bytes.length) }));
+    const base = stemOf(mergeList[0]?.name) || stem();
+    showDownload(new Blob([bytes], { type: 'application/pdf' }), `${base}-merged.pdf`);
+    trackPdfMerged({ count: mergeList.length });
+  } catch (err) {
+    setStatus(err?.message || t('pdf.errorGeneric'), 'error');
+  } finally {
+    busy = false;
+    if (btn) btn.disabled = mergeList.length < 2;
   }
 }
 
@@ -819,6 +1019,11 @@ function closePdfModal() {
   gridBuilt = false;
   mode = 'compress';
   organizeOp = 'extract';
+  // Merge-mode cleanup (release the held PDF byte arrays).
+  mergeList = [];
+  mergeBuilt = false;
+  pendingMergeFiles = null;
+  initialMode = 'compress';
 
   destroyWorker();
   pending.clear();

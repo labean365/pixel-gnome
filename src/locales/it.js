@@ -98,6 +98,20 @@ export default {
       errRanges: 'Inserisci intervalli come “1-3, 5, 8-10”.',
       errRangeOob: 'Gli intervalli devono essere compresi tra 1 e {total}.',
     },
+    merge: {
+      hint: 'Aggiungi i PDF e ordinali — verranno uniti dall’alto in basso in un unico file.',
+      summary: 'Unione di {files} PDF · {pages} pagine totali.',
+      add: '+ Aggiungi PDF',
+      build: 'Unisci i PDF',
+      building: 'Unione…',
+      moveUp: 'Sposta su',
+      moveDown: 'Sposta giù',
+      remove: 'Rimuovi {name}',
+      removeShort: 'Rimuovi',
+      reading: 'Lettura dei PDF…',
+      done: { one: 'Uniti — {count} pagina · {size}', other: 'Uniti — {count} pagine · {size}' },
+      errFile: 'Impossibile aggiungere “{name}” — non è un PDF leggibile.',
+    },
   },
 
   privacyNote:

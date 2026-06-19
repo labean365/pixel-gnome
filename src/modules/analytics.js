@@ -49,6 +49,24 @@ export function trackPdfOrganized({ op }) {
   push({ event: 'pdf_organized', pdf_op: String(op || '') });
 }
 
+/**
+ * Fire when PDFs are merged. Content-free: only a coarse bucket of how many
+ * files were combined — never names, sizes, or contents. No-ops without
+ * window.dataLayer (e.g. the portable single-file build).
+ * @param {{ count: number }} info
+ */
+export function trackPdfMerged({ count }) {
+  push({ event: 'pdf_merged', file_count: bucketCount(count) });
+}
+
+/** Bucket a file count so analytics never carries a precise per-merge value. */
+function bucketCount(n) {
+  if (typeof n !== 'number' || n <= 2) return '2';
+  if (n <= 5) return '3-5';
+  if (n <= 10) return '6-10';
+  return '11+';
+}
+
 /** Bucket the % reduction so analytics never carries a precise per-file value. */
 function bucketReduction(pct) {
   if (typeof pct !== 'number' || pct <= 0) return '0';

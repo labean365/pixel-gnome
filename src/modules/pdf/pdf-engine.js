@@ -325,15 +325,32 @@ export async function split(bytes, ranges) {
   );
 }
 
-// ---- Phase 3+ operations (merge / convert) — signatures reserved ----
-
-/** @returns {Promise<Uint8Array>} Concatenate multiple PDFs into one. */
+/**
+ * Concatenate multiple PDFs into one, in the given order, preserving text and
+ * vector content (structural page copy — never a raster). A graft map is bound
+ * to ONE source document, so we use a fresh map per source (it de-dupes that
+ * source's shared resources across its own pages); the `garbage=4` save pass
+ * then merges any duplicate objects/streams across documents.
+ * @param {Uint8Array[]} docs  Source PDF byte arrays, in output order.
+ * @returns {Promise<Uint8Array>}
+ */
 export async function merge(docs) {
   if (!Array.isArray(docs) || docs.length === 0) {
     throw new TypeError('pdf-engine.merge: expected a non-empty array of PDF byte arrays.');
   }
-  throw new NotImplementedError('merge');
+  const mupdf = await loadEngine();
+  const dst = new mupdf.PDFDocument();
+  docs.forEach((bytes, i) => {
+    assertBytes(bytes, `merge[doc ${i}]`);
+    const src = openPdf(mupdf, bytes);
+    const map = dst.newGraftMap(); // one map per source document (required)
+    const n = src.countPages();
+    for (let p = 0; p < n; p++) map.graftPage(-1, src, p); // -1 = append
+  });
+  return dst.saveToBuffer('garbage=4,deflate=yes').asUint8Array();
 }
+
+// ---- Phase 3+ operations (convert) — signatures reserved ----
 
 /** @returns {Promise<Uint8Array>} Combine images (already resized/compressed) into a PDF. */
 export async function imagesToPdf(images) {
