@@ -19,11 +19,11 @@ export default {
   step1: { title: 'Add images' },
 
   dropzone: {
-    aria: 'Drop images here or click to browse. Accepts JPEG, PNG, WebP, GIF, HEIC, SVG, and AVIF files.',
-    text: 'Drop images here',
+    aria: 'Drop images or PDFs here or click to browse. Accepts JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF, and PDF files.',
+    text: 'Drop images or PDFs here',
     hint: 'or click to browse',
-    formats: 'JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF',
-    fileInputAria: 'Choose image files',
+    formats: 'JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF, PDF',
+    fileInputAria: 'Choose image or PDF files',
   },
 
   pdf: {
@@ -168,8 +168,8 @@ export default {
 
   empty: {
     aria: 'Get started',
-    dropAria: 'Drop images here or click to choose files',
-    title: 'Drop images to resize',
+    dropAria: 'Drop images or PDFs here or click to choose files',
+    title: 'Drop images to resize, or a PDF to optimize',
     sub: 'They never leave your browser. Or press <kbd class="content-empty-kbd">⌘O</kbd> to choose files.',
     chipsAria: 'Start with a preset',
     chipConvert: 'Convert & compress',

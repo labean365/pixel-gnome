@@ -20,11 +20,11 @@ export default {
   step1: { title: 'Aggiungi immagini' },
 
   dropzone: {
-    aria: 'Trascina qui le immagini o clicca per selezionarle. Accetta file JPEG, PNG, WebP, GIF, HEIC, SVG e AVIF.',
-    text: 'Trascina qui le immagini',
-    hint: 'oppure clicca per selezionarle',
-    formats: 'JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF',
-    fileInputAria: 'Scegli i file immagine',
+    aria: 'Trascina qui immagini o PDF, oppure clicca per selezionarli. Accetta file JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF e PDF.',
+    text: 'Trascina qui immagini o PDF',
+    hint: 'oppure clicca per selezionarli',
+    formats: 'JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF, PDF',
+    fileInputAria: 'Scegli file immagine o PDF',
   },
 
   pdf: {
@@ -173,8 +173,8 @@ export default {
 
   empty: {
     aria: 'Per iniziare',
-    dropAria: 'Trascina qui le immagini o fai clic per scegliere i file',
-    title: 'Trascina le immagini da ridimensionare',
+    dropAria: 'Trascina qui immagini o PDF o fai clic per scegliere i file',
+    title: 'Trascina immagini da ridimensionare, o un PDF da ottimizzare',
     sub: 'Non lasciano mai il tuo browser. Oppure premi <kbd class="content-empty-kbd">⌘O</kbd> per scegliere i file.',
     chipsAria: 'Inizia con un preset',
     chipConvert: 'Converti e comprimi',

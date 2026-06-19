@@ -263,7 +263,7 @@
             id="dropZone"
             role="button"
             tabindex="0"
-            aria-label="Drop images here or click to browse. Accepts JPEG, PNG, WebP, GIF, HEIC, SVG, and AVIF files."
+            aria-label="Drop images or PDFs here or click to browse. Accepts JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF, and PDF files."
             data-i18n-attr="aria-label:dropzone.aria"
           >
             <div class="drop-zone-content">
@@ -283,10 +283,10 @@
                 <polyline points="17 8 12 3 7 8" />
                 <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              <p class="drop-zone-text" data-i18n="dropzone.text">Drop images here</p>
+              <p class="drop-zone-text" data-i18n="dropzone.text">Drop images or PDFs here</p>
               <p class="drop-zone-hint" data-i18n="dropzone.hint">or click to browse</p>
               <p class="drop-zone-formats" data-i18n="dropzone.formats">
-                JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF
+                JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF, PDF
               </p>
             </div>
             <input
@@ -880,7 +880,7 @@
                 id="contentEmptyDrop"
                 role="button"
                 tabindex="0"
-                aria-label="Drop images here or click to choose files"
+                aria-label="Drop images or PDFs here or click to choose files"
                 data-i18n-attr="aria-label:empty.dropAria"
               >
                 <svg
@@ -899,7 +899,9 @@
                   <circle cx="8.5" cy="8.5" r="1.5" />
                   <polyline points="21 15 16 10 5 21" />
                 </svg>
-                <h2 class="content-empty-title" data-i18n="empty.title">Drop images to resize</h2>
+                <h2 class="content-empty-title" data-i18n="empty.title">
+                  Drop images to resize, or a PDF to optimize
+                </h2>
                 <p class="content-empty-sub" data-i18n-html="empty.sub">
                   They never leave your browser. Or press
                   <kbd class="content-empty-kbd">⌘O</kbd> to choose files.
