@@ -69,6 +69,10 @@ import {
   isAnimatedWebp,
 } from './modules/animation-detect.js';
 import { MAX_MEGAPIXELS, MAX_BATCH_SIZE } from './modules/constants.js';
+import { initErrorReporter } from './modules/error-reporter.js';
+
+// Install global error handlers as early as possible so uncaught errors surface.
+initErrorReporter();
 
 // --- State ---
 

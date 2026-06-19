@@ -17,6 +17,17 @@ export default {
     langAria: 'Scegli la lingua',
   },
 
+  errs: {
+    summary: {
+      one: 'Si è verificato un problema — {count} errore registrato.',
+      other: 'Si è verificato un problema — {count} errori registrati.',
+    },
+    details: 'Dettagli',
+    hideDetails: 'Nascondi',
+    report: 'Invia report',
+    dismiss: 'Chiudi',
+  },
+
   step1: { title: 'Aggiungi immagini' },
 
   dropzone: {

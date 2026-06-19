@@ -16,6 +16,17 @@ export default {
     langAria: 'Choose language',
   },
 
+  errs: {
+    summary: {
+      one: 'Something went wrong — {count} error logged.',
+      other: 'Something went wrong — {count} errors logged.',
+    },
+    details: 'Details',
+    hideDetails: 'Hide',
+    report: 'Email report',
+    dismiss: 'Dismiss',
+  },
+
   step1: { title: 'Add images' },
 
   dropzone: {
