@@ -48,13 +48,6 @@ export const PDF_ENGINE = 'mupdf';
  * @property {(done:number,total:number)=>void} [onProgress]  Per-image progress.
  */
 
-class NotImplementedError extends Error {
-  constructor(method) {
-    super(`pdf-engine: "${method}" is not implemented yet.`);
-    this.name = 'NotImplementedError';
-  }
-}
-
 /** Cached engine module so the multi-MB wasm loads at most once per worker. */
 let _engine = null;
 
@@ -393,11 +386,43 @@ export async function imagesToPdf(images) {
 
 // ---- Phase 4 operations (convert) — signatures reserved ----
 
-/** @returns {Promise<Blob[]>} Rasterize pages to images (feeds the image pipeline). */
-export async function pdfToImages(bytes, options) {
+/**
+ * @typedef {Object} RasterizeOptions
+ * @property {'png'|'jpeg'} [format='png']  Output image format per page.
+ * @property {number} [dpi=150]   Render resolution; scale = dpi/72.
+ * @property {number} [quality=0.85]  0–1 JPEG quality (ignored for PNG).
+ * @property {(done:number,total:number)=>void} [onProgress]  Per-page progress.
+ */
+
+/**
+ * Rasterize every page of a PDF to an image (the inverse of imagesToPdf). Each
+ * page is rendered to a pixmap at `dpi/72` scale on an opaque RGB surface, then
+ * encoded as PNG (lossless) or JPEG. Returns one image's bytes per page, in
+ * order — the caller wraps them in Blobs (ZIP download or feed to the image
+ * pipeline).
+ * @param {Uint8Array} bytes
+ * @param {RasterizeOptions} [options]
+ * @returns {Promise<Uint8Array[]>}
+ */
+export async function pdfToImages(bytes, options = {}) {
   assertBytes(bytes, 'pdfToImages');
-  void options;
-  throw new NotImplementedError('pdfToImages');
+  const { format = 'png', dpi = 150, quality = 0.85, onProgress } = options;
+  const mupdf = await loadEngine();
+  const pdf = openPdf(mupdf, bytes);
+  const total = pdf.countPages();
+  const scale = Math.max(0.1, dpi / 72);
+  const jpegQuality = Math.round(Math.min(1, Math.max(0.1, quality)) * 100);
+  const matrix = mupdf.Matrix.scale(scale, scale);
+
+  const out = [];
+  for (let i = 0; i < total; i++) {
+    const page = pdf.loadPage(i);
+    // Opaque RGB (alpha=false): PDF pages render onto white, no transparency.
+    const pix = page.toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, false);
+    out.push(format === 'jpeg' ? pix.asJPEG(jpegQuality, false) : pix.asPNG());
+    if (onProgress) onProgress(i + 1, total);
+  }
+  return out;
 }
 
 /**

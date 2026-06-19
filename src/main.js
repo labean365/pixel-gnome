@@ -54,7 +54,12 @@ import { exportMultiSizeZip } from './modules/responsive-export.js';
 import { initKeyboardShortcuts } from './modules/keyboard-shortcuts.js';
 import { initPrivacyModal } from './modules/privacy-modal.js';
 import { initConsentBanner } from './modules/consent-banner.js';
-import { openPdfModal, isPdfSupported, imagesToPdfBlob } from './modules/pdf/pdf-ui.js';
+import {
+  openPdfModal,
+  isPdfSupported,
+  imagesToPdfBlob,
+  setImageImportHandler,
+} from './modules/pdf/pdf-ui.js';
 import { trackImageProcessed, trackExport } from './modules/analytics.js';
 import { isGifFile, isAnimatedGif } from './modules/gif-detect.js';
 import {
@@ -231,6 +236,9 @@ if (exportPdfBtn && isPdfSupported()) {
   exportPdfBtn.hidden = false;
   exportPdfBtn.addEventListener('click', () => handleExportPdf());
 }
+
+// PDF → images "Send to editor" loads rasterized pages into the image queue.
+if (isPdfSupported()) setImageImportHandler((files) => handleNewFiles(files));
 
 // Step 3 export mirrors — same handlers as the preview toolbar (Phase 3).
 const exportStep3Btn = document.getElementById('exportStep3Btn');

@@ -62,7 +62,7 @@ export default {
     errorGeneric: 'Something went wrong optimizing the PDF.',
     errorUnsupported: 'PDF optimization isn’t available in this build.',
     modeAria: 'Choose what to do with this PDF',
-    mode: { compress: 'Compress', organize: 'Organize' },
+    mode: { compress: 'Compress', organize: 'Organize', merge: 'Merge', toImages: 'To Images' },
     org: {
       operation: 'Operation',
       opExtract: 'Extract selected pages',
@@ -109,6 +109,24 @@ export default {
     },
     img: {
       errNone: 'No processed images to combine into a PDF.',
+    },
+    img2: {
+      hint: 'Render every page to an image. Pick a format and resolution.',
+      format: 'Format',
+      resolution: 'Resolution',
+      dpiScreen: 'Screen',
+      dpiStandard: 'Standard',
+      dpiPrint: 'Print',
+      downloadZip: 'Download ZIP',
+      sendToEditor: 'Send to editor',
+      rendering: 'Rendering pages… {done}/{total}',
+      zipping: 'Packaging…',
+      done: { one: 'Rendered {count} page.', other: 'Rendered {count} pages.' },
+      sent: {
+        one: 'Sent {count} page to the editor.',
+        other: 'Sent {count} pages to the editor.',
+      },
+      noEditor: 'Can’t send to the editor right now.',
     },
   },
 

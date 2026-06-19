@@ -59,6 +59,16 @@ export function trackPdfMerged({ count }) {
   push({ event: 'pdf_merged', file_count: bucketCount(count) });
 }
 
+/**
+ * Fire when a PDF is rasterized to images (PDF → images). Content-free: only the
+ * chosen output format and DPI — never filenames, page contents, or counts.
+ * No-ops without window.dataLayer (e.g. the portable single-file build).
+ * @param {{ format: 'png'|'jpeg', dpi: number }} info
+ */
+export function trackPdfRasterized({ format, dpi }) {
+  push({ event: 'pdf_rasterized', image_format: String(format || ''), dpi: Number(dpi) || 0 });
+}
+
 /** Bucket a file count so analytics never carries a precise per-merge value. */
 function bucketCount(n) {
   if (typeof n !== 'number' || n <= 2) return '2';

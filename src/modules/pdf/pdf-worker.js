@@ -17,21 +17,22 @@
  *   IN:  { type: 'pdf-split',    id, bytes, ranges }       // P2: page-index groups
  *   IN:  { type: 'pdf-merge',    id, docs }                // P2: PDF byte arrays, in order
  *   IN:  { type: 'pdf-from-images', id, images }           // P3: JPEG/PNG byte arrays → PDF
+ *   IN:  { type: 'pdf-rasterize', id, bytes, options }     // P4: PDF → one image per page
  *   OUT: { type: 'info',     id, info }
- *   OUT: { type: 'progress', id, done, total }      // emitted during optimize
- *   OUT: { type: 'result',   id, bytes, outputSize } // optimize / extract result
+ *   OUT: { type: 'progress', id, done, total }      // emitted during optimize + rasterize
+ *   OUT: { type: 'result',   id, bytes, outputSize } // optimize / extract / merge result
  *   OUT: { type: 'splitResult', id, parts, sizes }   // P2: array of PDF byte arrays
+ *   OUT: { type: 'rasterResult', id, pages, format }  // P4: array of image byte arrays
  *   OUT: { type: 'preview',  id, png, width, height } // transferable PNG bytes
  *   OUT: { type: 'error',    id, message }
  *
  * Worker globals (`self`, `postMessage`, `ImageBitmap`, etc.) come from the flat
  * ESLint config's worker-globals override for src/modules/**\/*-worker.js.
  *
- * STATUS: live. getInfo/optimize/renderPagePreview (P1) and extractPages/split/
- * merge (P2 organize + merge) are implemented in pdf-engine.js (MuPDF, Approach B)
- * and wired to the UI via pdf-ui.js. The remaining engine methods (imagesToPdf/
- * pdfToImages) still throw NotImplementedError and surface via the 'error'
- * message.
+ * STATUS: live. All engine methods are implemented in pdf-engine.js (MuPDF,
+ * Approach B) and wired to the UI via pdf-ui.js / the image-export flow:
+ * getInfo/optimize/renderPagePreview (P1), extractPages/split/merge (P2),
+ * imagesToPdf (P3), pdfToImages (P4).
  */
 
 import {
@@ -42,6 +43,7 @@ import {
   split,
   merge,
   imagesToPdf,
+  pdfToImages,
 } from './pdf-engine.js';
 
 /**
@@ -133,6 +135,19 @@ self.onmessage = async function (e) {
         self.postMessage({ type: 'result', id, bytes: out, outputSize: out.byteLength }, [
           out.buffer,
         ]);
+        break;
+      }
+
+      case 'pdf-rasterize': {
+        // One image per page; stream per-page progress, transfer every buffer.
+        const onProgress = (done, total) => self.postMessage({ type: 'progress', id, done, total });
+        const rendered = await pdfToImages(msg.bytes, { ...msg.options, onProgress });
+        const pages = rendered.map(toTransferable);
+        const format = msg.options?.format === 'jpeg' ? 'jpeg' : 'png';
+        self.postMessage(
+          { type: 'rasterResult', id, pages, format },
+          pages.map((p) => p.buffer)
+        );
         break;
       }
 

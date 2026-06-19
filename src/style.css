@@ -4070,3 +4070,8 @@ fieldset.setting-group legend.setting-label {
 .pdf-merge-add {
   display: flex;
 }
+
+/* --- To Images: let the format/resolution preset groups fill the row --- */
+.pdf-op-row .pdf-presets {
+  flex: 1;
+}

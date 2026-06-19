@@ -24,6 +24,7 @@ A lightweight, drag-and-drop image resizing tool that runs entirely in the brows
   - **Organize** — extract selected pages to a new PDF, remove pages, or split into multiple files (downloaded as a ZIP), all from a page-thumbnail selection grid
   - **Merge** — combine multiple PDFs into one, with a reorderable file list
   - **Images → PDF** — combine your processed images into a single PDF (one image per page) straight from the export bar
+  - **PDF → images** — rasterize every page to PNG/JPEG at a chosen resolution (Screen/Standard/Print), downloaded as a ZIP or sent into the editor queue for further resizing/converting
 - Light/dark theme
 - Single-file build option for portable offline use (PDF features excluded — the engine wasm can't be inlined)
 

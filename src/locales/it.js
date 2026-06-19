@@ -64,7 +64,7 @@ export default {
     errorGeneric: 'Si è verificato un problema durante l’ottimizzazione del PDF.',
     errorUnsupported: 'L’ottimizzazione PDF non è disponibile in questa versione.',
     modeAria: 'Scegli cosa fare con questo PDF',
-    mode: { compress: 'Comprimi', organize: 'Organizza' },
+    mode: { compress: 'Comprimi', organize: 'Organizza', merge: 'Unisci', toImages: 'In immagini' },
     org: {
       operation: 'Operazione',
       opExtract: 'Estrai le pagine selezionate',
@@ -114,6 +114,24 @@ export default {
     },
     img: {
       errNone: 'Nessuna immagine elaborata da combinare in un PDF.',
+    },
+    img2: {
+      hint: 'Genera un’immagine per ogni pagina. Scegli formato e risoluzione.',
+      format: 'Formato',
+      resolution: 'Risoluzione',
+      dpiScreen: 'Schermo',
+      dpiStandard: 'Standard',
+      dpiPrint: 'Stampa',
+      downloadZip: 'Scarica ZIP',
+      sendToEditor: 'Invia all’editor',
+      rendering: 'Generazione pagine… {done}/{total}',
+      zipping: 'Creazione pacchetto…',
+      done: { one: 'Generata {count} pagina.', other: 'Generate {count} pagine.' },
+      sent: {
+        one: 'Inviata {count} pagina all’editor.',
+        other: 'Inviate {count} pagine all’editor.',
+      },
+      noEditor: 'Impossibile inviare all’editor in questo momento.',
     },
   },
 

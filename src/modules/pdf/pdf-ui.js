@@ -12,6 +12,12 @@
  *     (pdf-extract / pdf-split, reusing pdf-preview for thumbnails).
  *   - Merge (P2): a reorderable list of PDFs (the open one + "Add PDFs") combined
  *     top-to-bottom into one file (pdf-merge). Multi-PDF drops open here directly.
+ *   - To Images (P4): rasterize every page to PNG/JPEG at a chosen DPI
+ *     (pdf-rasterize) → download a ZIP, or send the pages into the image queue
+ *     via the registered image-import handler.
+ *
+ * Also exports imagesToPdfBlob() (P3) for the headless image-export "Combine
+ * into PDF" action.
  *
  * Privacy: everything runs client-side. The multi-MB MuPDF wasm lives only
  * inside pdf-worker.js and is referenced via `new URL(... , import.meta.url)`,
@@ -25,7 +31,12 @@ import { t } from '../i18n.js';
 import { showToast } from '../toast.js';
 import { announce } from '../announcer.js';
 import { trackUrl, revokeUrl } from '../resource-tracker.js';
-import { trackPdfOptimized, trackPdfOrganized, trackPdfMerged } from '../analytics.js';
+import {
+  trackPdfOptimized,
+  trackPdfOrganized,
+  trackPdfMerged,
+  trackPdfRasterized,
+} from '../analytics.js';
 
 /**
  * Whether the PDF feature is compiled into this build. The single-file build
@@ -34,6 +45,16 @@ import { trackPdfOptimized, trackPdfOrganized, trackPdfMerged } from '../analyti
  */
 export function isPdfSupported() {
   return import.meta.env.VITE_PDF_ENABLED !== 'false';
+}
+
+/**
+ * Register the handler that "Send to editor" (PDF → images) calls with the
+ * rasterized pages as File objects. main.js wires this to its image-queue
+ * ingestion; kept as a registration to avoid a circular import.
+ * @param {(files: File[]) => void} fn
+ */
+export function setImageImportHandler(fn) {
+  imageImportHandler = typeof fn === 'function' ? fn : null;
 }
 
 // Preset → JPEG image quality (0–1). Tuned defaults; revisit with real docs.
@@ -73,6 +94,15 @@ let mergeSeq = 0; // id generator for merge rows
 let mergeBuilt = false; // merge list seeded with the current PDF yet
 let initialMode = 'compress'; // mode to show once the modal has loaded
 let pendingMergeFiles = null; // extra dropped PDFs to preload into the merge list
+
+// To-Images (rasterize) state.
+let rasterFormat = 'png'; // 'png' | 'jpeg'
+let rasterDpi = 150; // 96 (screen) | 150 (standard) | 300 (print)
+let rasterCache = null; // { key, pages:[Uint8Array], format } — last render, reused
+
+// Registered by main.js so "Send to editor" can hand page images to the queue
+// (set via setImageImportHandler — avoids a circular import).
+let imageImportHandler = null;
 
 /* ------------------------------------------------------------------ */
 /* Worker plumbing                                                    */
@@ -178,6 +208,9 @@ export async function openPdfModal(file, opts = {}) {
   gridBuilt = false;
   mergeList = [];
   mergeBuilt = false;
+  rasterFormat = 'png';
+  rasterDpi = 150;
+  rasterCache = null;
   const extra = Array.isArray(opts.mergeFiles) ? opts.mergeFiles : null;
   // Open into Merge when more than one PDF was provided.
   initialMode = extra && extra.length > 1 ? 'merge' : 'compress';
@@ -287,6 +320,7 @@ function renderShell() {
           <button class="pdf-mode-tab active" data-mode="compress" role="tab" aria-selected="true">${t('pdf.mode.compress')}</button>
           <button class="pdf-mode-tab" data-mode="organize" role="tab" aria-selected="false">${t('pdf.mode.organize')}</button>
           <button class="pdf-mode-tab" data-mode="merge" role="tab" aria-selected="false">${t('pdf.mode.merge')}</button>
+          <button class="pdf-mode-tab" data-mode="toimages" role="tab" aria-selected="false">${t('pdf.mode.toImages')}</button>
         </div>
 
         <!-- COMPRESS pane -->
@@ -383,6 +417,33 @@ function renderShell() {
           </div>
           <div class="pdf-actions">
             <button class="btn btn-primary" data-action="merge" id="pdfMergeBtn">${t('pdf.merge.build')}</button>
+          </div>
+        </div>
+
+        <!-- TO IMAGES pane (rasterize pages) -->
+        <div class="pdf-pane pdf-pane-toimages" id="pdfPaneToImages" hidden>
+          <p class="pdf-organize-hint">${t('pdf.img2.hint')}</p>
+
+          <div class="pdf-op-row">
+            <span>${t('pdf.img2.format')}</span>
+            <div class="pdf-presets" role="group" aria-label="${t('pdf.img2.format')}">
+              <button class="pdf-preset active" data-raster-format="png">PNG</button>
+              <button class="pdf-preset" data-raster-format="jpeg">JPEG</button>
+            </div>
+          </div>
+
+          <div class="pdf-op-row">
+            <span>${t('pdf.img2.resolution')}</span>
+            <div class="pdf-presets" role="group" aria-label="${t('pdf.img2.resolution')}">
+              <button class="pdf-preset" data-raster-dpi="96">${t('pdf.img2.dpiScreen')}</button>
+              <button class="pdf-preset active" data-raster-dpi="150">${t('pdf.img2.dpiStandard')}</button>
+              <button class="pdf-preset" data-raster-dpi="300">${t('pdf.img2.dpiPrint')}</button>
+            </div>
+          </div>
+
+          <div class="pdf-actions">
+            <button class="btn btn-primary" data-action="raster-zip" id="pdfRasterZipBtn">${t('pdf.img2.downloadZip')}</button>
+            <button class="btn btn-secondary" data-action="raster-editor" id="pdfRasterEditorBtn">${t('pdf.img2.sendToEditor')}</button>
           </div>
         </div>
 
@@ -535,6 +596,16 @@ function wireEvents() {
     });
   }
   byId('pdfMergeBtn').addEventListener('click', runMerge);
+
+  // --- To Images (rasterize) ---
+  backdrop.querySelectorAll('[data-raster-format]').forEach((btn) => {
+    btn.addEventListener('click', () => setRasterFormat(btn.dataset.rasterFormat));
+  });
+  backdrop.querySelectorAll('[data-raster-dpi]').forEach((btn) => {
+    btn.addEventListener('click', () => setRasterDpi(Number(btn.dataset.rasterDpi)));
+  });
+  byId('pdfRasterZipBtn').addEventListener('click', runRasterZip);
+  byId('pdfRasterEditorBtn').addEventListener('click', runRasterToEditor);
 }
 
 function onKeyDown(e) {
@@ -551,9 +622,10 @@ function syncQualityOutput() {
 /* Organize mode                                                      */
 /* ------------------------------------------------------------------ */
 
-/** Switch between the Compress, Organize, and Merge panes. */
+/** Switch between the Compress, Organize, Merge, and To-Images panes. */
 function switchMode(next) {
-  const valid = next === 'compress' || next === 'organize' || next === 'merge';
+  const valid =
+    next === 'compress' || next === 'organize' || next === 'merge' || next === 'toimages';
   if (busy || !valid || next === mode) return;
   mode = next;
   backdrop.querySelectorAll('.pdf-mode-tab').forEach((tab) => {
@@ -564,9 +636,11 @@ function switchMode(next) {
   const compress = byId('pdfPaneCompress');
   const organize = byId('pdfPaneOrganize');
   const merge = byId('pdfPaneMerge');
+  const toimages = byId('pdfPaneToImages');
   if (compress) compress.hidden = mode !== 'compress';
   if (organize) organize.hidden = mode !== 'organize';
   if (merge) merge.hidden = mode !== 'merge';
+  if (toimages) toimages.hidden = mode !== 'toimages';
 
   // Result from one mode shouldn't linger as a download for the other.
   hideDownload();
@@ -852,6 +926,121 @@ function hideDownload() {
 }
 
 /* ------------------------------------------------------------------ */
+/* To Images (rasterize)                                              */
+/* ------------------------------------------------------------------ */
+
+function setRasterFormat(fmt) {
+  rasterFormat = fmt === 'jpeg' ? 'jpeg' : 'png';
+  backdrop.querySelectorAll('[data-raster-format]').forEach((b) => {
+    b.classList.toggle('active', b.dataset.rasterFormat === rasterFormat);
+  });
+  hideDownload();
+}
+
+function setRasterDpi(dpi) {
+  rasterDpi = dpi;
+  backdrop.querySelectorAll('[data-raster-dpi]').forEach((b) => {
+    b.classList.toggle('active', Number(b.dataset.rasterDpi) === rasterDpi);
+  });
+  hideDownload();
+}
+
+/** File extension + MIME for the current raster format. */
+function rasterExt() {
+  return rasterFormat === 'jpeg' ? 'jpg' : 'png';
+}
+function rasterMime() {
+  return rasterFormat === 'jpeg' ? 'image/jpeg' : 'image/png';
+}
+
+/**
+ * Render every page to images at the current format/DPI, reusing the last render
+ * if format+DPI are unchanged. Returns an array of Uint8Array page images.
+ */
+async function renderRasterPages() {
+  const key = `${rasterFormat}@${rasterDpi}`;
+  if (rasterCache && rasterCache.key === key) return rasterCache.pages;
+  const total = pdfInfo?.pageCount ?? 0;
+  const res = await call(
+    'pdf-rasterize',
+    { bytes: srcBytes, options: { format: rasterFormat, dpi: rasterDpi, quality: 0.85 } },
+    (done) => setStatus(t('pdf.img2.rendering', { done, total }), 'info', true)
+  );
+  const pages = (res.pages || []).map((p) => (p instanceof Uint8Array ? p : new Uint8Array(p)));
+  rasterCache = { key, pages, format: rasterFormat };
+  return pages;
+}
+
+async function runRasterZip() {
+  if (busy || !srcBytes || !pdfInfo) return;
+  busy = true;
+  setRasterButtonsDisabled(true);
+  hideDownload();
+  setStatus(t('pdf.img2.rendering', { done: 0, total: pdfInfo.pageCount }), 'info', true);
+  try {
+    const pages = await renderRasterPages();
+    setStatus(t('pdf.img2.zipping'), 'info', true);
+    const zip = new JSZip();
+    const ext = rasterExt();
+    const pad = String(pages.length).length;
+    pages.forEach((bytes, i) => {
+      zip.file(`${stem()}-p${String(i + 1).padStart(pad, '0')}.${ext}`, bytes);
+    });
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+    setStatus(t('pdf.img2.done', { count: pages.length }), 'success');
+    announce(t('pdf.img2.done', { count: pages.length }));
+    showDownload(blob, `${stem()}-pages.zip`);
+    trackPdfRasterized({ format: rasterFormat, dpi: rasterDpi });
+  } catch (err) {
+    setStatus(err?.message || t('pdf.errorGeneric'), 'error');
+  } finally {
+    busy = false;
+    setRasterButtonsDisabled(false);
+  }
+}
+
+async function runRasterToEditor() {
+  if (busy || !srcBytes || !pdfInfo) return;
+  if (!imageImportHandler) {
+    setStatus(t('pdf.img2.noEditor'), 'error');
+    return;
+  }
+  busy = true;
+  setRasterButtonsDisabled(true);
+  hideDownload();
+  setStatus(t('pdf.img2.rendering', { done: 0, total: pdfInfo.pageCount }), 'info', true);
+  try {
+    const pages = await renderRasterPages();
+    const ext = rasterExt();
+    const mime = rasterMime();
+    const base = stem();
+    const pad = String(pages.length).length;
+    const files = pages.map(
+      (bytes, i) =>
+        new File([bytes], `${base}-p${String(i + 1).padStart(pad, '0')}.${ext}`, { type: mime })
+    );
+    const count = files.length;
+    trackPdfRasterized({ format: rasterFormat, dpi: rasterDpi });
+    // Hand off to the image queue, then close the modal so the user sees them.
+    const handler = imageImportHandler;
+    closePdfModal();
+    handler(files);
+    showToast(t('pdf.img2.sent', { count }), 'success', 4000);
+  } catch (err) {
+    setStatus(err?.message || t('pdf.errorGeneric'), 'error');
+    busy = false;
+    setRasterButtonsDisabled(false);
+  }
+}
+
+function setRasterButtonsDisabled(disabled) {
+  const z = byId('pdfRasterZipBtn');
+  const e = byId('pdfRasterEditorBtn');
+  if (z) z.disabled = disabled;
+  if (e) e.disabled = disabled;
+}
+
+/* ------------------------------------------------------------------ */
 /* Merge mode                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -1074,6 +1263,8 @@ function closePdfModal() {
   mergeBuilt = false;
   pendingMergeFiles = null;
   initialMode = 'compress';
+  // To-Images cleanup (release cached rendered pages).
+  rasterCache = null;
 
   destroyWorker();
   pending.clear();
