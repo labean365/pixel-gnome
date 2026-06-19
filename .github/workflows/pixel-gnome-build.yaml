@@ -46,6 +46,11 @@ jobs:
           VITE_GTM_ID: ${{ vars.VITE_GTM_ID }}
         run: npm run build
 
+      - name: Verify PDF build contract
+        # Fails the deploy if the PDF worker / MuPDF chunk / wasm weren't emitted
+        # (the silent regressions we hit twice). See scripts/check-pdf-build.mjs.
+        run: node scripts/check-pdf-build.mjs dist
+
 # Please do not touch the following action
       - name: Store deployment content
         uses: ionos-deploy-now/artifact-action@v1

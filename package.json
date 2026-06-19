@@ -15,6 +15,8 @@
     "build": "vite build",
     "build:single": "vite build --config vite.singlefile.config.js && node scripts/cleanup-singlefile.mjs",
     "build:all": "vite build && vite build --config vite.singlefile.config.js",
+    "check:pdf": "node scripts/check-pdf-build.mjs dist && node scripts/check-pdf-build.mjs dist-single --single",
+    "verify": "npm run lint && npm run format:check && npm run build:all && npm run check:pdf",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

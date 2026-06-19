@@ -1,0 +1,14 @@
+#!/bin/sh
+# PixelGnome pre-push gate.
+#
+# Runs the full verification before any push so a build that fails lint,
+# formatting, or the PDF build-contract smoke test can never reach production.
+# This exists because a clean `vite build` exit is NOT proof the PDF worker was
+# emitted or that it will start (see scripts/check-pdf-build.mjs).
+#
+# Enable once per clone:
+#   git config core.hooksPath .githooks
+#
+# Bypass in an emergency with:  git push --no-verify
+echo "[pre-push] running npm run verify…"
+npm run verify
