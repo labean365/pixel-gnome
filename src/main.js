@@ -54,6 +54,7 @@ import { exportMultiSizeZip } from './modules/responsive-export.js';
 import { initKeyboardShortcuts } from './modules/keyboard-shortcuts.js';
 import { initPrivacyModal } from './modules/privacy-modal.js';
 import { initConsentBanner } from './modules/consent-banner.js';
+import { openPdfModal, isPdfSupported } from './modules/pdf/pdf-ui.js';
 import { trackImageProcessed, trackExport } from './modules/analytics.js';
 import { isGifFile, isAnimatedGif } from './modules/gif-detect.js';
 import {
@@ -911,11 +912,32 @@ function handleRejectedFiles(files) {
   showToast(t('toast.unsupportedType', { names: nameList }), 'error', 6000);
 }
 
+/** True for PDF files (by MIME or .pdf extension). */
+function isPdfFile(file) {
+  if (file.type === 'application/pdf') return true;
+  return !!file.name && file.name.toLowerCase().endsWith('.pdf');
+}
+
 /**
  * Handle new files from drop zone or file picker
  * @param {File[]} files
  */
 async function handleNewFiles(files) {
+  // PDFs take a separate path — the single-PDF optimizer modal, not the image
+  // queue (P1 handles one PDF at a time; batch is a later iteration).
+  const pdfs = files.filter(isPdfFile);
+  if (pdfs.length > 0) {
+    if (!isPdfSupported()) {
+      showToast(t('pdf.errorUnsupported'), 'error', 6000);
+    } else {
+      if (pdfs.length > 1) showToast(t('pdf.onePerRun'), 'info', 6000);
+      openPdfModal(pdfs[0]);
+    }
+    const images = files.filter((f) => !isPdfFile(f));
+    if (images.length === 0) return; // nothing else to do
+    files = images; // fall through to process the remaining images
+  }
+
   // Performance guard: warn on large batches
   if (files.length > MAX_BATCH_SIZE) {
     showToast(t('toast.largeBatch', { count: files.length, max: MAX_BATCH_SIZE }), 'warning', 8000);

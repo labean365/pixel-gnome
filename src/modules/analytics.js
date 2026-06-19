@@ -28,6 +28,25 @@ export function trackExport({ format, count, isZip }) {
   push({ event: 'export', export_format: format, export_count: count, is_zip: !!isZip });
 }
 
+/**
+ * Fire when a PDF is optimized. Content-free: only the bucketed size reduction,
+ * never the filename or any document content. No-ops without window.dataLayer
+ * (e.g. in the portable single-file build), like the events above.
+ * @param {{ reductionPct: number }} info
+ */
+export function trackPdfOptimized({ reductionPct }) {
+  push({ event: 'pdf_optimized', reduction_pct: bucketReduction(reductionPct) });
+}
+
+/** Bucket the % reduction so analytics never carries a precise per-file value. */
+function bucketReduction(pct) {
+  if (typeof pct !== 'number' || pct <= 0) return '0';
+  if (pct < 25) return '1-24';
+  if (pct < 50) return '25-49';
+  if (pct < 75) return '50-74';
+  return '75-100';
+}
+
 function push(payload) {
   if (!Array.isArray(window.dataLayer)) return;
   window.dataLayer.push({ ...payload, page_location: window.location.href });

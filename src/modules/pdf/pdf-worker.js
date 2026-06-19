@@ -22,12 +22,31 @@
  * Worker globals (`self`, `postMessage`, `ImageBitmap`, etc.) come from the flat
  * ESLint config's worker-globals override for src/modules/**\/*-worker.js.
  *
- * STATUS: scaffold. The engine methods it calls are not implemented yet
- * (pdf-engine.js throws NotImplementedError); errors surface via the 'error'
- * message until the backend is wired in.
+ * STATUS: live. getInfo/optimize/renderPagePreview are implemented in
+ * pdf-engine.js (MuPDF, Approach B). The P1 optimize path (pdf-info /
+ * pdf-optimize / pdf-preview) is wired to the UI via pdf-ui.js. The Phase 2+
+ * engine methods (merge/split/extractPages/imagesToPdf/pdfToImages) still throw
+ * NotImplementedError and surface via the 'error' message.
  */
 
 import { getInfo, optimize, renderPagePreview } from './pdf-engine.js';
+
+/**
+ * Copy bytes into a fresh, transferable ArrayBuffer.
+ *
+ * MuPDF returns Uint8Arrays that are often VIEWS onto its WebAssembly heap, and
+ * a WASM-memory ArrayBuffer is not detachable — passing `view.buffer` in the
+ * postMessage transfer list throws "ArrayBuffer ... is not detachable and could
+ * not be transferred". Copying into a standalone buffer makes it transferable
+ * (one copy, same cost as the structured clone we'd otherwise pay).
+ * @param {Uint8Array} u8
+ * @returns {Uint8Array}
+ */
+function toTransferable(u8) {
+  const copy = new Uint8Array(u8.length);
+  copy.set(u8);
+  return copy;
+}
 
 self.onmessage = async function (e) {
   const msg = e.data || {};
@@ -44,9 +63,10 @@ self.onmessage = async function (e) {
       case 'pdf-optimize': {
         const onProgress = (done, total) => self.postMessage({ type: 'progress', id, done, total });
         const out = await optimize(msg.bytes, { ...msg.options, onProgress });
-        // Transfer the underlying buffer to avoid a copy back to the main thread.
-        self.postMessage({ type: 'result', id, bytes: out, outputSize: out.byteLength }, [
-          out.buffer,
+        // Copy off the WASM heap so the buffer is transferable (see toTransferable).
+        const result = toTransferable(out);
+        self.postMessage({ type: 'result', id, bytes: result, outputSize: result.byteLength }, [
+          result.buffer,
         ]);
         break;
       }
@@ -57,7 +77,8 @@ self.onmessage = async function (e) {
           msg.pageIndex,
           msg.scale ?? 0.3
         );
-        self.postMessage({ type: 'preview', id, png, width, height }, [png.buffer]);
+        const pngOut = toTransferable(png);
+        self.postMessage({ type: 'preview', id, png: pngOut, width, height }, [pngOut.buffer]);
         break;
       }
 

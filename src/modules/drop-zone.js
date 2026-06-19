@@ -13,6 +13,7 @@ const ACCEPTED_TYPES = new Set([
   'image/heif',
   'image/svg+xml',
   'image/avif',
+  'application/pdf',
 ]);
 
 // HEIC/AVIF files sometimes have an empty MIME type on some OSes
@@ -26,6 +27,7 @@ const ACCEPTED_EXTENSIONS = new Set([
   '.heif',
   '.svg',
   '.avif',
+  '.pdf',
 ]);
 
 /**
