@@ -5,6 +5,9 @@ dist-single
 deploy-*
 package-lock.json
 
+# IONOS Deploy Now generated workflows — marked "do not edit"; leave as-is.
+.github/workflows
+
 # Throwaway prototypes
 poc
 

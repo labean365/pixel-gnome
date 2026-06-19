@@ -1,24 +1,24 @@
 version: 2
 updates:
   # npm dependencies (root package.json)
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 5
     groups:
       # Bundle low-risk dev/tooling bumps into one PR to reduce noise.
       dev-dependencies:
-        dependency-type: "development"
+        dependency-type: 'development'
     labels:
-      - "dependencies"
+      - 'dependencies'
 
   # GitHub Actions used in the workflows
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 5
     labels:
-      - "dependencies"
-      - "github-actions"
+      - 'dependencies'
+      - 'github-actions'

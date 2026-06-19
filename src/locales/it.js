@@ -35,7 +35,8 @@ export default {
     loading: 'Lettura del PDF…',
     pages: { one: '{count} pagina', other: '{count} pagine' },
     textPreserved: 'Testo preservato',
-    textPreservedHint: 'Questo PDF ha un livello di testo: resta selezionabile dopo l’ottimizzazione.',
+    textPreservedHint:
+      'Questo PDF ha un livello di testo: resta selezionabile dopo l’ottimizzazione.',
     prevPage: 'Pagina precedente',
     nextPage: 'Pagina successiva',
     pageOf: 'Pagina {n} di {total}',
