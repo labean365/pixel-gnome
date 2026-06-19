@@ -3,6 +3,31 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 import fs from 'fs';
 import path from 'path';
 
+// Belt-and-suspenders to the VITE_PDF_ENABLED flag below: physically keep the
+// PDF engine and the `mupdf` wasm out of the single-file bundle by replacing
+// those modules with empty stubs. The runtime flag stops the code being
+// reached; this stops the wasm being bundled/inlined in the first place. It is
+// applied to BOTH the main graph and the worker sub-build (Vite builds workers
+// in a separate pipeline via `worker.plugins`), because the engine + `mupdf`
+// live inside the worker graph (pdf-worker.js → pdf-engine.js → import('mupdf')).
+function excludePdfPlugin() {
+  return {
+    name: 'exclude-pdf-from-singlefile',
+    enforce: 'pre',
+    resolveId(source) {
+      if (source === 'mupdf') return '\0pdf-stub';
+      return null;
+    },
+    load(id) {
+      if (id === '\0pdf-stub') return 'export default {};';
+      if (id.endsWith('/pdf/pdf-worker.js') || id.endsWith('/pdf/pdf-engine.js')) {
+        return '/* PDF feature excluded from the single-file build */\nexport {};';
+      }
+      return null;
+    },
+  };
+}
+
 export default defineConfig({
   root: 'src',
   // The portable build must stay a single self-contained HTML file, so skip
@@ -14,8 +39,18 @@ export default defineConfig({
   // network-silent anyway; this also keeps the id string out of the bundled JS.
   define: {
     'import.meta.env.VITE_GTM_ID': JSON.stringify(''),
+    // The portable single-file build EXCLUDES the PDF feature: its engine is
+    // multiple MB of MuPDF WebAssembly that cannot be inlined into one HTML
+    // file. pdf-ui.js reads this flag (isPdfSupported()) and shows a graceful
+    // "not available in this build" message instead of opening the optimizer.
+    'import.meta.env.VITE_PDF_ENABLED': JSON.stringify('false'),
+  },
+  // Apply the PDF exclusion to the worker sub-build too (see excludePdfPlugin).
+  worker: {
+    plugins: () => [excludePdfPlugin()],
   },
   plugins: [
+    excludePdfPlugin(),
     viteSingleFile(),
     {
       name: 'singlefile-fixes',
