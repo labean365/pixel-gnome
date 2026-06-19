@@ -7,7 +7,7 @@
  */
 export default {
   header: {
-    tagline: 'Resize images without uploading them',
+    tagline: 'Private, in-browser image & PDF tools — nothing leaves your device.',
     helpTitle: 'Help & Changelog',
     helpAria: 'Help and changelog',
     themeTitle: 'Toggle dark mode',
@@ -239,6 +239,7 @@ export default {
     title: 'Drop images to resize, or a PDF to optimize',
     sub: 'They never leave your browser. Or press <kbd class="content-empty-kbd">⌘O</kbd> to choose files.',
     chipsAria: 'Start with a preset',
+    chipPdf: 'Optimize a PDF',
     chipConvert: 'Convert & compress',
     chipFullHd: 'Full HD',
     chipSquare: 'Social Square',
@@ -299,7 +300,7 @@ export default {
     versionTitle: 'View changelog',
     versionAria: 'View changelog',
     credit:
-      'A tool by <a href="https://321enterprise.com/" target="_blank" rel="noopener noreferrer">321Enterprise</a>. Need a custom browser tool like this? <a href="https://321enterprise.com/" target="_blank" rel="noopener noreferrer">Get in touch</a>.',
+      'A tool by <a href="https://321enterprise.com/" target="_blank" rel="noopener noreferrer">321Enterprise</a>. Need a custom browser tool like this? <a href="https://321enterprise.com/index.html#contact" target="_blank" rel="noopener noreferrer">Get in touch</a>.',
   },
 
   // ---- Dynamic strings (toasts, screen-reader announcements) ----

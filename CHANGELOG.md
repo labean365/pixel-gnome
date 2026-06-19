@@ -8,11 +8,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [v0.24.0-rc] — 2026-06-19
+## [v0.24.0] — 2026-06-19
 
 ### PDF toolkit — compress, organize, merge, and convert PDFs, all client-side
 
-The headline feature: PixelGnome now handles **PDFs** end to end, entirely in the browser via a lazily-loaded MuPDF (WebAssembly) engine. Nothing is uploaded — the same privacy promise as the image tools. The engine runs in a dedicated Web Worker off the main thread, and the whole PDF feature is excluded from the portable single-file build (the multi-MB wasm can't be inlined).
+The headline feature: PixelGnome now handles **PDFs** end to end, entirely in the browser via a lazily-loaded MuPDF (WebAssembly) engine. Nothing is uploaded — the same privacy promise as the image tools. The engine runs in a dedicated Web Worker off the main thread, and the whole PDF feature is excluded from the portable single-file build (the multi-MB wasm can't be inlined). This is also the first release to drop the `-rc` label — promoting the build from release-candidate to stable.
+
+#### Landing & defaults
+
+- **Tagline now reflects both toolsets** — "Private, in-browser image & PDF tools — nothing leaves your device" (was images-only); meta/OG/Twitter descriptions and titles updated to match.
+- **"Optimize a PDF" quick-pick** added to the empty-state landing so the PDF toolkit is discoverable on first visit (shown only where the PDF feature is available).
+- **Default preset is now "Original size — convert & compress"** (no resize) — the most common intent — instead of Full HD.
+- **"Get in touch"** footer link now points to the 321Enterprise contact form (`/index.html#contact`).
 
 #### Added
 

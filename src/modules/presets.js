@@ -26,8 +26,9 @@
 // exact modes it prevents blowing a small source up into a soft full-size crop.
 const BUILT_IN_PRESETS = [
   // --- Original (convert & compress only — no resize) ---
-  // NOTE: kept out of index 0 on purpose so getDefaultPreset() stays full-hd;
-  // rebuildPresetDropdown() renders the 'Original' group first regardless.
+  // This is the first-run default (getDefaultPreset() fetches it by id, so array
+  // position doesn't matter); rebuildPresetDropdown() renders the 'Original'
+  // group first regardless.
   {
     id: 'original',
     name: 'Original size — convert & compress',
@@ -290,10 +291,9 @@ export function getPresetById(id) {
  * @returns {Preset}
  */
 export function getDefaultPreset() {
-  // Explicitly full-hd (not BUILT_IN_PRESETS[0]) so adding new presets to the
-  // top of the array — e.g. the 'original' convert-only preset — never silently
-  // changes the first-run default.
-  return { ...(getPresetById('full-hd') || BUILT_IN_PRESETS[0]) };
+  // First-run default is 'original' (convert & compress, no resize) — the most
+  // common intent. Falls back to full-hd, then the first built-in.
+  return { ...(getPresetById('original') || getPresetById('full-hd') || BUILT_IN_PRESETS[0]) };
 }
 
 /**

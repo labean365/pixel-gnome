@@ -9,9 +9,9 @@
 export function getChangelogContent() {
   return `
     <div class="help-changelog-entry">
-      <div class="help-changelog-version">v0.24.0-rc — PDF Toolkit</div>
+      <div class="help-changelog-version">v0.24.0 — PDF Toolkit</div>
       <div class="help-changelog-items">
-        PixelGnome now works with <strong>PDFs</strong>, all in your browser — nothing is uploaded. Drop a PDF to <strong>compress</strong> it (recompresses images and strips bloat while keeping the text selectable), <strong>organize</strong> it (extract, remove, or split pages from a thumbnail grid), or <strong>merge</strong> several PDFs into one with a reorderable list. You can also turn <strong>images into a PDF</strong> (one page per image, from the export bar) and go the other way — turn <strong>a PDF into images</strong> (render each page to PNG or JPEG at Screen / Standard / Print resolution, downloaded as a ZIP or sent straight into the editor for resizing). (This changelog stays in English.)
+        PixelGnome now works with <strong>PDFs</strong>, all in your browser — nothing is uploaded. Drop a PDF to <strong>compress</strong> it (recompresses images and strips bloat while keeping the text selectable), <strong>organize</strong> it (extract, remove, or split pages from a thumbnail grid), or <strong>merge</strong> several PDFs into one with a reorderable list. You can also turn <strong>images into a PDF</strong> (one page per image, from the export bar) and go the other way — turn <strong>a PDF into images</strong> (render each page to PNG or JPEG at Screen / Standard / Print resolution, downloaded as a ZIP or sent straight into the editor for resizing). The start screen gets an <strong>“Optimize a PDF”</strong> shortcut, and the default preset is now <strong>Original size</strong> (convert &amp; compress, no resize). (This changelog stays in English.)
       </div>
     </div>
     <div class="help-changelog-entry">

@@ -209,8 +209,18 @@ if (contentEmptyDrop) {
     }
   });
 }
+// Reveal the "Optimize a PDF" chip only when the PDF feature is compiled in
+// (it's excluded from the portable single-file build).
+const emptyChipPdf = document.getElementById('emptyChipPdf');
+if (emptyChipPdf && isPdfSupported()) emptyChipPdf.hidden = false;
+
 for (const chip of document.querySelectorAll('.content-empty-chip')) {
   chip.addEventListener('click', () => {
+    // PDF chip: open the file picker (a chosen PDF routes to the PDF modal).
+    if (chip.dataset.action === 'pdf') {
+      fileInputEl.click();
+      return;
+    }
     const presetSelect = document.getElementById('presetSelect');
     if (presetSelect && chip.dataset.preset) {
       presetSelect.value = chip.dataset.preset;

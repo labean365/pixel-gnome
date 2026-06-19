@@ -81,7 +81,7 @@
     <title>PixelGnome — Private, in-browser image resizer &amp; converter</title>
     <meta
       name="description"
-      content="Resize, compress, and convert images right in your browser. Batch-friendly, no uploads, no account — your files never leave your device. Free."
+      content="Private, in-browser image & PDF tools. Resize, compress, and convert images, and compress, organize, merge, or convert PDFs — batch-friendly, no uploads, no account. Your files never leave your device. Free."
     />
     <link rel="canonical" href="https://pixelgnome.com/" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f5f7" />
@@ -91,10 +91,10 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="PixelGnome" />
     <meta property="og:url" content="https://pixelgnome.com/" />
-    <meta property="og:title" content="PixelGnome — Private, in-browser image resizer" />
+    <meta property="og:title" content="PixelGnome — Private, in-browser image & PDF tools" />
     <meta
       property="og:description"
-      content="Resize, compress, and convert images in your browser. No uploads, no account — your files never leave your device."
+      content="Image & PDF tools in your browser — resize/convert images and compress/organize/merge PDFs. No uploads, no account; your files never leave your device."
     />
     <meta property="og:image" content="https://pixelgnome.com/og-image.png" />
     <meta property="og:image:width" content="1200" />
@@ -102,10 +102,10 @@
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="PixelGnome — Private, in-browser image resizer" />
+    <meta name="twitter:title" content="PixelGnome — Private, in-browser image & PDF tools" />
     <meta
       name="twitter:description"
-      content="Resize, compress, and convert images in your browser. No uploads, no account — your files never leave your device."
+      content="Image & PDF tools in your browser — resize/convert images and compress/organize/merge PDFs. No uploads, no account; your files never leave your device."
     />
     <meta name="twitter:image" content="https://pixelgnome.com/og-image.png" />
 
@@ -916,6 +916,16 @@
                 <button
                   class="content-empty-chip"
                   type="button"
+                  id="emptyChipPdf"
+                  data-action="pdf"
+                  data-i18n="empty.chipPdf"
+                  hidden
+                >
+                  Optimize a PDF
+                </button>
+                <button
+                  class="content-empty-chip"
+                  type="button"
                   data-preset="original"
                   data-i18n="empty.chipConvert"
                 >
@@ -1320,7 +1330,7 @@
             aria-label="View changelog"
             data-i18n-attr="title:footer.versionTitle;aria-label:footer.versionAria"
           >
-            v0.24.0-rc
+            v0.24.0
           </button>
         </nav>
         <p class="footer-credit" data-i18n-html="footer.credit">
@@ -1328,7 +1338,10 @@
           <a href="https://321enterprise.com/" target="_blank" rel="noopener noreferrer"
             >321Enterprise</a
           >. Need a custom browser tool like this?
-          <a href="https://321enterprise.com/" target="_blank" rel="noopener noreferrer"
+          <a
+            href="https://321enterprise.com/index.html#contact"
+            target="_blank"
+            rel="noopener noreferrer"
             >Get in touch</a
           >.
         </p>

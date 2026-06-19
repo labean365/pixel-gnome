@@ -1,0 +1,31 @@
+v0.24.0 — PDF toolkit (stable; drops -rc)
+
+Promotes v0.24.0-rc to stable and ships the complete client-side PDF
+toolkit. Nothing is uploaded; a lazily-loaded MuPDF (WebAssembly) engine
+runs in a Web Worker and is excluded from the single-file build.
+
+PDF toolkit
+- Compress: structural optimization preserving selectable text/vectors.
+- Organize: extract / remove / split pages (every-page or custom ranges).
+- Merge: combine multiple PDFs with a reorderable list.
+- Images -> PDF: one page per image, from the export bar.
+- PDF -> images: rasterize pages to PNG/JPEG at Screen/Standard/Print
+  DPI; download a ZIP or send pages into the editor queue.
+- Italian strings; content-free analytics (pdf_optimized/organized/
+  merged/rasterized).
+
+Landing & defaults
+- Tagline now covers image & PDF tools (was images-only); meta/OG/Twitter
+  updated.
+- "Optimize a PDF" quick-pick added to the empty state (PDF builds only).
+- Default preset is now "Original size - convert & compress" (no resize).
+- "Get in touch" footer link -> 321enterprise.com/index.html#contact.
+
+Versioning
+- Dropped the -rc label: the app ships continuously and is in real use;
+  verify + CI guard regressions, so the release-candidate label no longer
+  reflects how it ships. 0.24.0 is the stable line.
+
+Verified: npm run verify green (eslint 0 errors, prettier clean,
+build:all, check:pdf on dist + dist-single); footer matches package.json
+(v0.24.0); live-tested all five PDF operations.

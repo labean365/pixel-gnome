@@ -8,7 +8,7 @@
  */
 export default {
   header: {
-    tagline: 'Ridimensiona le immagini direttamente nel browser',
+    tagline: 'Strumenti privati per immagini e PDF nel browser — nulla lascia il tuo dispositivo.',
     helpTitle: 'Aiuto e novità',
     helpAria: 'Aiuto e novità',
     themeTitle: 'Attiva/disattiva modalità scura',
@@ -247,6 +247,7 @@ export default {
     title: 'Trascina immagini da ridimensionare, o un PDF da ottimizzare',
     sub: 'Non lasciano mai il tuo browser. Oppure premi <kbd class="content-empty-kbd">⌘O</kbd> per scegliere i file.',
     chipsAria: 'Inizia con un preset',
+    chipPdf: 'Ottimizza un PDF',
     chipConvert: 'Converti e comprimi',
     chipFullHd: 'Full HD',
     chipSquare: 'Social quadrato',
@@ -307,7 +308,7 @@ export default {
     versionTitle: 'Visualizza le novità',
     versionAria: 'Visualizza le novità',
     credit:
-      'Creato da <a href="https://321enterprise.com/" target="_blank" rel="noopener noreferrer">321Enterprise</a>. Hai bisogno di uno strumento web su misura? <a href="https://321enterprise.com/" target="_blank" rel="noopener noreferrer">Contattaci</a>.',
+      'Creato da <a href="https://321enterprise.com/" target="_blank" rel="noopener noreferrer">321Enterprise</a>. Hai bisogno di uno strumento web su misura? <a href="https://321enterprise.com/index.html#contact" target="_blank" rel="noopener noreferrer">Contattaci</a>.',
   },
 
   // ---- Stringhe dinamiche (toast, annunci per screen reader) ----
