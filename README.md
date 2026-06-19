@@ -22,6 +22,8 @@ A lightweight, drag-and-drop image resizing tool that runs entirely in the brows
 - Client-side PDF toolkit (lazy-loaded, nothing uploaded):
   - **Compress** — structural optimization that recompresses embedded images, strips metadata, subsets fonts, and garbage-collects while keeping the text layer selectable (presets + advanced quality/structure controls, before/after size readout)
   - **Organize** — extract selected pages to a new PDF, remove pages, or split into multiple files (downloaded as a ZIP), all from a page-thumbnail selection grid
+  - **Merge** — combine multiple PDFs into one, with a reorderable file list
+  - **Images → PDF** — combine your processed images into a single PDF (one image per page) straight from the export bar
 - Light/dark theme
 - Single-file build option for portable offline use (PDF features excluded — the engine wasm can't be inlined)
 
