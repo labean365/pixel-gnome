@@ -2,11 +2,14 @@
 // Copyright (C) 2026 321Enterprise
 /**
  * pdf/pdf-ui.js
- * P1 PDF optimization UI — a self-contained modal that opens when the user
- * drops/picks a single PDF. Owns the lazy pdf-worker lifecycle, drives the
- * worker message protocol (pdf-info / pdf-optimize / pdf-preview), and renders
- * the controls (presets + advanced toggles/slider), a page preview, a
- * before/after size readout, and a download button.
+ * PDF toolkit UI — a self-contained modal that opens when the user drops/picks a
+ * single PDF. Owns the lazy pdf-worker lifecycle and drives the worker message
+ * protocol. Two modes, switched by a segmented control:
+ *   - Compress (P1): presets + advanced toggles/slider, page preview, before/
+ *     after size readout (pdf-info / pdf-optimize / pdf-preview).
+ *   - Organize (P2): a page-thumbnail selection grid for extract / remove pages
+ *     (→ one PDF) and split into multiple files (→ a ZIP via JSZip)
+ *     (pdf-extract / pdf-split, reusing pdf-preview for thumbnails).
  *
  * Privacy: everything runs client-side. The multi-MB MuPDF wasm lives only
  * inside pdf-worker.js and is referenced via `new URL(... , import.meta.url)`,
@@ -15,11 +18,12 @@
  * (VITE_PDF_ENABLED === 'false'; see vite.singlefile.config.js).
  */
 
+import JSZip from 'jszip';
 import { t } from '../i18n.js';
 import { showToast } from '../toast.js';
 import { announce } from '../announcer.js';
 import { trackUrl, revokeUrl } from '../resource-tracker.js';
-import { trackPdfOptimized } from '../analytics.js';
+import { trackPdfOptimized, trackPdfOrganized } from '../analytics.js';
 
 /**
  * Whether the PDF feature is compiled into this build. The single-file build
@@ -47,11 +51,19 @@ const pending = new Map(); // id → { resolve, reject, onProgress }
 let srcBytes = null; // Uint8Array of the source PDF
 let srcFile = null; // original File (for name + size)
 let resultBytes = null; // optimized Uint8Array, once produced
-let resultUrl = null; // object URL for the optimized download
+let resultUrl = null; // object URL for the current download (PDF or ZIP)
 let previewUrl = null; // object URL for the current preview page
 let pdfInfo = null; // { pageCount, fileSize, hasText, imageCount }
 let currentPage = 0; // 0-based page shown in preview
-let busy = false; // an optimize run is in flight
+let busy = false; // an optimize/organize run is in flight
+
+// Organize-mode state.
+let mode = 'compress'; // 'compress' | 'organize'
+let organizeOp = 'extract'; // 'extract' | 'remove' | 'split'
+const selectedPages = new Set(); // 0-based indices selected in the page grid
+let gridBuilt = false; // page grid rendered yet (lazy on first Organize view)
+let thumbObserver = null; // IntersectionObserver for lazy thumbnails
+const thumbUrls = []; // object URLs for thumbnails (revoked on close)
 
 /* ------------------------------------------------------------------ */
 /* Worker plumbing                                                    */
@@ -148,8 +160,13 @@ export async function openPdfModal(file) {
   srcFile = file;
   resultBytes = null;
   currentPage = 0;
+  mode = 'compress';
+  organizeOp = 'extract';
+  selectedPages.clear();
+  gridBuilt = false;
 
   renderShell();
+  setStatus(t('pdf.loading'), 'info', true);
 
   try {
     const buf = await file.arrayBuffer();
@@ -165,6 +182,7 @@ export async function openPdfModal(file) {
     pdfInfo = res.info;
     renderInfo();
     await showPreview(0);
+    setStatus('');
   } catch (err) {
     setStatus(err?.message || t('pdf.errorGeneric'), 'error');
   }
@@ -195,45 +213,98 @@ function renderShell() {
       <div class="pdf-modal-body">
         <div class="pdf-info" id="pdfInfo">${t('pdf.loading')}</div>
 
-        <div class="pdf-preview" id="pdfPreview">
-          <div class="pdf-preview-stage" id="pdfPreviewStage"></div>
-          <div class="pdf-preview-nav" id="pdfPreviewNav" hidden>
-            <button class="btn btn-icon" data-action="prev" aria-label="${t('pdf.prevPage')}" title="${t('pdf.prevPage')}">‹</button>
-            <span class="pdf-preview-pageno" id="pdfPageNo"></span>
-            <button class="btn btn-icon" data-action="next" aria-label="${t('pdf.nextPage')}" title="${t('pdf.nextPage')}">›</button>
+        <div class="pdf-mode-switch" role="tablist" aria-label="${t('pdf.modeAria')}">
+          <button class="pdf-mode-tab active" data-mode="compress" role="tab" aria-selected="true">${t('pdf.mode.compress')}</button>
+          <button class="pdf-mode-tab" data-mode="organize" role="tab" aria-selected="false">${t('pdf.mode.organize')}</button>
+        </div>
+
+        <!-- COMPRESS pane -->
+        <div class="pdf-pane pdf-pane-compress" id="pdfPaneCompress">
+          <div class="pdf-preview" id="pdfPreview">
+            <div class="pdf-preview-stage" id="pdfPreviewStage"></div>
+            <div class="pdf-preview-nav" id="pdfPreviewNav" hidden>
+              <button class="btn btn-icon" data-action="prev" aria-label="${t('pdf.prevPage')}" title="${t('pdf.prevPage')}">‹</button>
+              <span class="pdf-preview-pageno" id="pdfPageNo"></span>
+              <button class="btn btn-icon" data-action="next" aria-label="${t('pdf.nextPage')}" title="${t('pdf.nextPage')}">›</button>
+            </div>
+          </div>
+
+          <div class="pdf-controls">
+            <div class="pdf-presets" role="group" aria-label="${t('pdf.presetsAria')}">
+              ${Object.keys(PRESETS)
+                .map(
+                  (key) =>
+                    `<button class="pdf-preset${key === DEFAULT_PRESET ? ' active' : ''}" data-preset="${key}">${t('pdf.preset.' + key)}</button>`
+                )
+                .join('')}
+            </div>
+
+            <details class="pdf-advanced">
+              <summary>${t('pdf.advanced')}</summary>
+              <div class="pdf-advanced-body">
+                <label class="pdf-slider-row">
+                  <span>${t('pdf.quality')}</span>
+                  <input type="range" id="pdfQuality" min="10" max="100" step="1" value="${Math.round(PRESETS[DEFAULT_PRESET] * 100)}">
+                  <output id="pdfQualityOut">${Math.round(PRESETS[DEFAULT_PRESET] * 100)}</output>
+                </label>
+                <label class="pdf-toggle"><input type="checkbox" id="pdfRecompress" checked> ${t('pdf.opt.recompress')}</label>
+                <label class="pdf-toggle"><input type="checkbox" id="pdfStripMeta" checked> ${t('pdf.opt.stripMeta')}</label>
+                <label class="pdf-toggle"><input type="checkbox" id="pdfSubsetFonts" checked> ${t('pdf.opt.subsetFonts')}</label>
+                <label class="pdf-toggle"><input type="checkbox" id="pdfGarbage" checked> ${t('pdf.opt.garbage')}</label>
+              </div>
+            </details>
+          </div>
+
+          <div class="pdf-actions">
+            <button class="btn btn-primary" data-action="optimize" id="pdfOptimizeBtn">${t('pdf.optimize')}</button>
           </div>
         </div>
 
-        <div class="pdf-controls">
-          <div class="pdf-presets" role="group" aria-label="${t('pdf.presetsAria')}">
-            ${Object.keys(PRESETS)
-              .map(
-                (key) =>
-                  `<button class="pdf-preset${key === DEFAULT_PRESET ? ' active' : ''}" data-preset="${key}">${t('pdf.preset.' + key)}</button>`
-              )
-              .join('')}
+        <!-- ORGANIZE pane -->
+        <div class="pdf-pane pdf-pane-organize" id="pdfPaneOrganize" hidden>
+          <div class="pdf-organize-controls">
+            <label class="pdf-op-row">
+              <span>${t('pdf.org.operation')}</span>
+              <select id="pdfOrganizeOp">
+                <option value="extract">${t('pdf.org.opExtract')}</option>
+                <option value="remove">${t('pdf.org.opRemove')}</option>
+                <option value="split">${t('pdf.org.opSplit')}</option>
+              </select>
+            </label>
+
+            <p class="pdf-organize-hint" id="pdfOrganizeHint"></p>
+
+            <div class="pdf-select-toolbar" id="pdfSelectToolbar">
+              <button type="button" class="pdf-linkbtn" data-action="select-all">${t('pdf.org.selectAll')}</button>
+              <button type="button" class="pdf-linkbtn" data-action="select-none">${t('pdf.org.clear')}</button>
+              <span class="pdf-select-count" id="pdfSelectCount"></span>
+            </div>
+
+            <div class="pdf-split-controls" id="pdfSplitControls" hidden>
+              <label class="pdf-op-row">
+                <span>${t('pdf.org.splitMode')}</span>
+                <select id="pdfSplitMode">
+                  <option value="each">${t('pdf.org.splitEach')}</option>
+                  <option value="ranges">${t('pdf.org.splitRanges')}</option>
+                </select>
+              </label>
+              <label class="pdf-ranges-row" id="pdfRangesRow" hidden>
+                <span>${t('pdf.org.ranges')}</span>
+                <input type="text" id="pdfRanges" inputmode="numeric" placeholder="${t('pdf.org.rangesHint')}">
+              </label>
+            </div>
           </div>
 
-          <details class="pdf-advanced">
-            <summary>${t('pdf.advanced')}</summary>
-            <div class="pdf-advanced-body">
-              <label class="pdf-slider-row">
-                <span>${t('pdf.quality')}</span>
-                <input type="range" id="pdfQuality" min="10" max="100" step="1" value="${Math.round(PRESETS[DEFAULT_PRESET] * 100)}">
-                <output id="pdfQualityOut">${Math.round(PRESETS[DEFAULT_PRESET] * 100)}</output>
-              </label>
-              <label class="pdf-toggle"><input type="checkbox" id="pdfRecompress" checked> ${t('pdf.opt.recompress')}</label>
-              <label class="pdf-toggle"><input type="checkbox" id="pdfStripMeta" checked> ${t('pdf.opt.stripMeta')}</label>
-              <label class="pdf-toggle"><input type="checkbox" id="pdfSubsetFonts" checked> ${t('pdf.opt.subsetFonts')}</label>
-              <label class="pdf-toggle"><input type="checkbox" id="pdfGarbage" checked> ${t('pdf.opt.garbage')}</label>
-            </div>
-          </details>
+          <div class="pdf-page-grid" id="pdfPageGrid"></div>
+
+          <div class="pdf-actions">
+            <button class="btn btn-primary" data-action="organize" id="pdfOrganizeBtn">${t('pdf.org.build')}</button>
+          </div>
         </div>
 
         <div class="pdf-status" id="pdfStatus" role="status" aria-live="polite"></div>
 
-        <div class="pdf-actions">
-          <button class="btn btn-primary" data-action="optimize" id="pdfOptimizeBtn">${t('pdf.optimize')}</button>
+        <div class="pdf-actions pdf-download-row">
           <a class="btn btn-secondary" data-action="download" id="pdfDownloadBtn" hidden download>${t('pdf.download')}</a>
         </div>
       </div>
@@ -329,6 +400,33 @@ function wireEvents() {
     prev.addEventListener('click', () => showPreview(currentPage - 1));
     next.addEventListener('click', () => showPreview(currentPage + 1));
   }
+
+  // --- Organize mode ---
+  backdrop.querySelectorAll('.pdf-mode-tab').forEach((tab) => {
+    tab.addEventListener('click', () => switchMode(tab.dataset.mode));
+  });
+
+  const opSel = byId('pdfOrganizeOp');
+  if (opSel) opSel.addEventListener('change', () => setOrganizeOp(opSel.value));
+
+  const splitMode = byId('pdfSplitMode');
+  if (splitMode) {
+    splitMode.addEventListener('change', () => {
+      const row = byId('pdfRangesRow');
+      if (row) row.hidden = splitMode.value !== 'ranges';
+    });
+  }
+
+  const toolbar = byId('pdfSelectToolbar');
+  if (toolbar) {
+    toolbar.addEventListener('click', (e) => {
+      const act = e.target?.dataset?.action;
+      if (act === 'select-all') selectAllPages(true);
+      else if (act === 'select-none') selectAllPages(false);
+    });
+  }
+
+  byId('pdfOrganizeBtn').addEventListener('click', runOrganize);
 }
 
 function onKeyDown(e) {
@@ -339,6 +437,301 @@ function syncQualityOutput() {
   const slider = byId('pdfQuality');
   const out = byId('pdfQualityOut');
   if (slider && out) out.textContent = slider.value;
+}
+
+/* ------------------------------------------------------------------ */
+/* Organize mode                                                      */
+/* ------------------------------------------------------------------ */
+
+/** Switch between the Compress and Organize panes. */
+function switchMode(next) {
+  if (busy || (next !== 'compress' && next !== 'organize') || next === mode) return;
+  mode = next;
+  backdrop.querySelectorAll('.pdf-mode-tab').forEach((tab) => {
+    const on = tab.dataset.mode === mode;
+    tab.classList.toggle('active', on);
+    tab.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  const compress = byId('pdfPaneCompress');
+  const organize = byId('pdfPaneOrganize');
+  if (compress) compress.hidden = mode !== 'compress';
+  if (organize) organize.hidden = mode !== 'organize';
+
+  // Result from one mode shouldn't linger as a download for the other.
+  hideDownload();
+  setStatus('');
+  if (mode === 'organize' && !gridBuilt) buildPageGrid();
+}
+
+/** Apply the selected organize operation (extract / remove / split). */
+function setOrganizeOp(op) {
+  organizeOp = op;
+  const splitCtl = byId('pdfSplitControls');
+  const toolbar = byId('pdfSelectToolbar');
+  const isSplit = op === 'split';
+  if (splitCtl) splitCtl.hidden = !isSplit;
+  // Page selection only applies to extract/remove; split uses its own controls.
+  if (toolbar) toolbar.hidden = isSplit;
+  const grid = byId('pdfPageGrid');
+  if (grid) grid.classList.toggle('pdf-grid-readonly', isSplit);
+  // Disable the checkboxes in split mode so label clicks can't mutate selection.
+  backdrop.querySelectorAll('.pdf-thumb-check').forEach((cb) => {
+    cb.disabled = isSplit;
+  });
+  // Contextual instruction so it's obvious HOW to pick pages.
+  const hint = byId('pdfOrganizeHint');
+  if (hint) hint.textContent = t('pdf.org.hint.' + op);
+  // Action button reflects the operation rather than a generic "Build".
+  const btn = byId('pdfOrganizeBtn');
+  if (btn) btn.textContent = t('pdf.org.buildOp.' + op);
+  hideDownload();
+  updateSelectionUI();
+}
+
+/** Build the lazy page-thumbnail grid (one tile per page, rendered on scroll). */
+function buildPageGrid() {
+  const grid = byId('pdfPageGrid');
+  if (!grid || !pdfInfo) return;
+  gridBuilt = true;
+  grid.innerHTML = '';
+
+  thumbObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const tile = entry.target;
+          thumbObserver.unobserve(tile);
+          renderThumb(Number(tile.dataset.page));
+        }
+      }
+    },
+    { root: grid, rootMargin: '120px' }
+  );
+
+  for (let i = 0; i < pdfInfo.pageCount; i++) {
+    const tile = document.createElement('label');
+    tile.className = 'pdf-thumb';
+    tile.dataset.page = String(i);
+    tile.innerHTML = `
+      <input type="checkbox" class="pdf-thumb-check" data-page="${i}" aria-label="${t('pdf.org.pageLabel', { n: i + 1 })}">
+      <span class="pdf-thumb-stage" aria-hidden="true"></span>
+      <span class="pdf-thumb-no">${i + 1}</span>`;
+    const cb = tile.querySelector('.pdf-thumb-check');
+    cb.addEventListener('change', () => togglePage(i, cb.checked));
+    grid.appendChild(tile);
+    thumbObserver.observe(tile);
+  }
+  // Initialize the operation state (hint, toolbar, checkbox enablement) so the
+  // grid is fully set up the first time Organize is shown — not just on change.
+  setOrganizeOp(organizeOp);
+}
+
+/** Render one page thumbnail via the worker preview (small scale). */
+async function renderThumb(index) {
+  const tile = backdrop?.querySelector(`.pdf-thumb[data-page="${index}"] .pdf-thumb-stage`);
+  if (!tile) return;
+  tile.classList.add('loading');
+  try {
+    const res = await call('pdf-preview', { bytes: srcBytes, pageIndex: index, scale: 0.22 });
+    const blob = new Blob([res.png], { type: 'image/png' });
+    const url = trackUrl(URL.createObjectURL(blob));
+    thumbUrls.push(url);
+    tile.innerHTML = `<img src="${url}" alt="" loading="lazy" />`;
+  } catch {
+    tile.innerHTML = `<span class="pdf-thumb-fail">${index + 1}</span>`;
+  } finally {
+    tile.classList.remove('loading');
+  }
+}
+
+function togglePage(index, checked) {
+  if (checked) selectedPages.add(index);
+  else selectedPages.delete(index);
+  const tile = backdrop?.querySelector(`.pdf-thumb[data-page="${index}"]`);
+  if (tile) tile.classList.toggle('selected', checked);
+  hideDownload();
+  updateSelectionUI();
+}
+
+function selectAllPages(on) {
+  if (!pdfInfo) return;
+  selectedPages.clear();
+  backdrop.querySelectorAll('.pdf-thumb-check').forEach((cb) => {
+    cb.checked = on;
+    cb.closest('.pdf-thumb')?.classList.toggle('selected', on);
+  });
+  if (on) for (let i = 0; i < pdfInfo.pageCount; i++) selectedPages.add(i);
+  hideDownload();
+  updateSelectionUI();
+}
+
+/** Update the selected-count label and enable/disable the Build button. */
+function updateSelectionUI() {
+  const countEl = byId('pdfSelectCount');
+  const n = selectedPages.size;
+  if (countEl) countEl.textContent = t('pdf.org.selectedCount', { count: n });
+  const btn = byId('pdfOrganizeBtn');
+  if (btn && !busy) btn.disabled = organizeOp !== 'split' && n === 0;
+}
+
+/**
+ * Parse a 1-based range spec like "1-3, 5, 8-10" into groups of 0-based page
+ * indices (one group per comma-separated token). Throws on malformed input or
+ * out-of-range pages.
+ * @param {string} spec
+ * @param {number} pageCount
+ * @returns {number[][]}
+ */
+function parseRanges(spec, pageCount) {
+  const tokens = String(spec || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (tokens.length === 0) throw new Error(t('pdf.org.errRanges'));
+
+  const groups = [];
+  for (const tok of tokens) {
+    const m = tok.match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+    if (!m) throw new Error(t('pdf.org.errRanges'));
+    const start = Number(m[1]);
+    const end = m[2] ? Number(m[2]) : start;
+    const lo = Math.min(start, end);
+    const hi = Math.max(start, end);
+    if (lo < 1 || hi > pageCount) throw new Error(t('pdf.org.errRangeOob', { total: pageCount }));
+    const group = [];
+    for (let p = lo; p <= hi; p++) group.push(p - 1); // → 0-based
+    groups.push(group);
+  }
+  return groups;
+}
+
+async function runOrganize() {
+  if (busy || !srcBytes || !pdfInfo) return;
+
+  // Resolve the operation into worker calls.
+  let kind; // 'single' | 'split'
+  let pages = null;
+  let ranges = null;
+  const total = pdfInfo.pageCount;
+
+  try {
+    if (organizeOp === 'extract') {
+      if (selectedPages.size === 0) throw new Error(t('pdf.org.errNoSelection'));
+      pages = [...selectedPages].sort((a, b) => a - b);
+      kind = 'single';
+    } else if (organizeOp === 'remove') {
+      if (selectedPages.size === 0) throw new Error(t('pdf.org.errNoSelection'));
+      if (selectedPages.size >= total) throw new Error(t('pdf.org.errRemoveAll'));
+      pages = [];
+      for (let i = 0; i < total; i++) if (!selectedPages.has(i)) pages.push(i);
+      kind = 'single';
+    } else {
+      // split
+      const splitMode = byId('pdfSplitMode')?.value || 'each';
+      if (splitMode === 'each') {
+        if (total < 2) throw new Error(t('pdf.org.errSplitOne'));
+        ranges = Array.from({ length: total }, (_, i) => [i]);
+      } else {
+        ranges = parseRanges(byId('pdfRanges')?.value, total);
+      }
+      kind = 'split';
+    }
+  } catch (err) {
+    setStatus(err?.message || t('pdf.errorGeneric'), 'error');
+    return;
+  }
+
+  busy = true;
+  const btn = byId('pdfOrganizeBtn');
+  if (btn) btn.disabled = true;
+  hideDownload();
+  setStatus(t('pdf.org.building'), 'info', true);
+
+  try {
+    if (kind === 'single') {
+      const res = await call('pdf-extract', { bytes: srcBytes, pages });
+      const bytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes);
+      const name = organizeOp === 'extract' ? `${stem()}-extract.pdf` : `${stem()}-removed.pdf`;
+      finishSingleResult(bytes, name, pages.length);
+      trackPdfOrganized({ op: organizeOp });
+    } else {
+      const res = await call('pdf-split', { bytes: srcBytes, ranges });
+      await finishSplitResult(res.parts || [], ranges);
+      trackPdfOrganized({ op: 'split' });
+    }
+  } catch (err) {
+    setStatus(err?.message || t('pdf.errorGeneric'), 'error');
+  } finally {
+    busy = false;
+    if (btn) btn.disabled = false;
+    updateSelectionUI();
+  }
+}
+
+/** Wire a single-PDF organize result to the download button. */
+function finishSingleResult(bytes, filename, pageCount) {
+  resultBytes = bytes;
+  setStatus(
+    t('pdf.org.doneSingle', { count: pageCount, size: formatBytes(bytes.length) }),
+    'success'
+  );
+  announce(t('pdf.org.doneSingle', { count: pageCount, size: formatBytes(bytes.length) }));
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  showDownload(blob, filename);
+}
+
+/** Zip the split parts and wire the ZIP to the download button. */
+async function finishSplitResult(parts, ranges) {
+  if (!parts.length) {
+    setStatus(t('pdf.errorGeneric'), 'error');
+    return;
+  }
+  const zip = new JSZip();
+  const base = stem();
+  parts.forEach((part, i) => {
+    const u8 = part instanceof Uint8Array ? part : new Uint8Array(part);
+    const r = ranges[i];
+    const label = r.length === 1 ? `${r[0] + 1}` : `${r[0] + 1}-${r[r.length - 1] + 1}`;
+    zip.file(`${base}-${label}.pdf`, u8);
+  });
+  const blob = await zip.generateAsync({ type: 'blob' });
+  setStatus(
+    t('pdf.org.doneSplit', { count: parts.length, size: formatBytes(blob.size) }),
+    'success'
+  );
+  announce(t('pdf.org.doneSplit', { count: parts.length, size: formatBytes(blob.size) }));
+  showDownload(blob, `${base}-split.zip`);
+}
+
+/** Source filename without extension. */
+function stem() {
+  const name = srcFile?.name || 'document.pdf';
+  const dot = name.lastIndexOf('.');
+  return dot > 0 ? name.slice(0, dot) : name;
+}
+
+/** Show the (green, ready) download button for a generated blob. */
+function showDownload(blob, filename) {
+  const dl = byId('pdfDownloadBtn');
+  if (!dl) return;
+  if (resultUrl) revokeUrl(resultUrl);
+  resultUrl = trackUrl(URL.createObjectURL(blob));
+  dl.href = resultUrl;
+  dl.download = filename;
+  dl.hidden = false;
+  dl.classList.add('pdf-download-ready');
+}
+
+/** Hide and reset the download button (e.g. when inputs change). */
+function hideDownload() {
+  const dl = byId('pdfDownloadBtn');
+  if (!dl) return;
+  dl.hidden = true;
+  dl.classList.remove('pdf-download-ready');
+  if (resultUrl) {
+    revokeUrl(resultUrl);
+    resultUrl = null;
+  }
 }
 
 function readOptions() {
@@ -356,17 +749,16 @@ async function runOptimize() {
   if (busy || !srcBytes) return;
   busy = true;
   const btn = byId('pdfOptimizeBtn');
-  const dl = byId('pdfDownloadBtn');
-  if (dl) dl.hidden = true;
+  hideDownload();
   if (btn) btn.disabled = true;
-  setStatus(t('pdf.optimizing'), 'info');
+  setStatus(t('pdf.optimizing'), 'info', true);
 
   try {
     const res = await call(
       'pdf-optimize',
       { bytes: srcBytes, options: readOptions() },
       (done, total) => {
-        if (total > 0) setStatus(t('pdf.progress', { done, total }), 'info');
+        if (total > 0) setStatus(t('pdf.progress', { done, total }), 'info', true);
       }
     );
     resultBytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes);
@@ -396,14 +788,10 @@ function finishResult(outSize) {
   }
 
   // Wire the download (locally-generated file; nothing leaves the browser).
-  const dl = byId('pdfDownloadBtn');
-  if (dl) {
-    if (resultUrl) revokeUrl(resultUrl);
+  // Only offer a download when there was an actual reduction.
+  if (!noGain) {
     const blob = new Blob([resultBytes], { type: 'application/pdf' });
-    resultUrl = trackUrl(URL.createObjectURL(blob));
-    dl.href = resultUrl;
-    dl.download = optimizedName(srcFile.name);
-    dl.hidden = false;
+    showDownload(blob, optimizedName(srcFile.name));
   }
 }
 
@@ -420,6 +808,18 @@ function closePdfModal() {
     revokeUrl(resultUrl);
     resultUrl = null;
   }
+  // Organize-mode cleanup.
+  if (thumbObserver) {
+    thumbObserver.disconnect();
+    thumbObserver = null;
+  }
+  for (const url of thumbUrls) revokeUrl(url);
+  thumbUrls.length = 0;
+  selectedPages.clear();
+  gridBuilt = false;
+  mode = 'compress';
+  organizeOp = 'extract';
+
   destroyWorker();
   pending.clear();
   if (backdrop) {
@@ -440,17 +840,25 @@ function byId(id) {
   return backdrop ? backdrop.querySelector('#' + id) : null;
 }
 
-function setStatus(text, kind) {
+function setStatus(text, kind, showSpinner = false) {
   const el = byId('pdfStatus');
   if (!el) return;
   el.textContent = text;
-  el.className = 'pdf-status' + (kind ? ' pdf-status-' + kind : '');
+  el.className =
+    'pdf-status' + (kind ? ' pdf-status-' + kind : '') + (showSpinner ? ' pdf-status-busy' : '');
 }
 
+/**
+ * Download filename for an optimized PDF, suffixed with the active preset
+ * (`-email` / `-web` / `-max`) or `-custom` when the slider was moved off a
+ * preset. Falls back to `-optimized` if state can't be read.
+ */
 function optimizedName(name) {
   const dot = name.lastIndexOf('.');
-  const stem = dot > 0 ? name.slice(0, dot) : name;
-  return `${stem}-optimized.pdf`;
+  const fileStem = dot > 0 ? name.slice(0, dot) : name;
+  const active = backdrop?.querySelector('.pdf-preset.active')?.dataset?.preset;
+  const suffix = active || 'custom';
+  return `${fileStem}-${suffix}.pdf`;
 }
 
 function formatBytes(bytes) {

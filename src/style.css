@@ -3707,3 +3707,285 @@ fieldset.setting-group legend.setting-label {
 .pdf-actions .btn {
   flex: 1 1 auto;
 }
+
+/* --- Loading spinner in the status line --- */
+.pdf-status-busy::before {
+  content: '';
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 0.5em;
+  vertical-align: -0.1em;
+  border: 2px solid var(--color-border-light);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: pdf-spin 0.7s linear infinite;
+}
+
+@keyframes pdf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdf-status-busy::before {
+    animation-duration: 2s;
+  }
+}
+
+/* --- Download button promoted to "ready" (green) when a result exists --- */
+.btn.pdf-download-ready {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #fff;
+}
+
+.btn.pdf-download-ready:hover:not(:disabled) {
+  background: var(--color-success-hover);
+  border-color: var(--color-success-hover);
+}
+
+/* --- Mode switch (Compress / Organize) --- */
+.pdf-mode-switch {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+}
+
+.pdf-mode-tab {
+  flex: 1 1 0;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-family: var(--font-sans);
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.pdf-mode-tab:hover {
+  color: var(--color-text);
+}
+
+.pdf-mode-tab.active {
+  background: var(--color-surface, #fff);
+  color: var(--color-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.pdf-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* --- Organize controls --- */
+.pdf-organize-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.pdf-organize-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.pdf-op-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--text-sm);
+}
+
+.pdf-op-row > span {
+  min-width: 5.5em;
+  color: var(--color-text-secondary);
+}
+
+.pdf-op-row select,
+.pdf-ranges-row input {
+  flex: 1;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+}
+
+.pdf-ranges-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--text-sm);
+}
+
+.pdf-ranges-row > span {
+  min-width: 5.5em;
+  color: var(--color-text-secondary);
+}
+
+.pdf-select-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: var(--text-sm);
+}
+
+.pdf-linkbtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.pdf-linkbtn:hover {
+  text-decoration: underline;
+}
+
+.pdf-select-count {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+}
+
+/* --- Page-thumbnail selection grid --- */
+.pdf-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: var(--space-sm);
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--space-xs);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+}
+
+.pdf-thumb {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-xs);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.pdf-thumb:hover {
+  border-color: var(--color-accent);
+}
+
+.pdf-thumb.selected {
+  border-color: var(--color-accent);
+  background: var(--color-success-soft);
+}
+
+.pdf-thumb-check {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+  z-index: 1;
+}
+
+/* A check badge in the corner of selected tiles, on top of the thumbnail. */
+.pdf-thumb.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--color-accent);
+  border-radius: 50%;
+}
+
+.pdf-thumb-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1.3;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border-light);
+  overflow: hidden;
+}
+
+.pdf-thumb-stage img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.pdf-thumb-stage.loading {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-bg) 25%,
+    var(--color-border-light) 50%,
+    var(--color-bg) 75%
+  );
+  background-size: 200% 100%;
+  animation: pdf-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes pdf-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.pdf-thumb-no {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.pdf-thumb-fail {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/* Split mode ignores per-page selection — dim the checkboxes for clarity. */
+.pdf-page-grid.pdf-grid-readonly .pdf-thumb {
+  cursor: default;
+}
+
+.pdf-page-grid.pdf-grid-readonly .pdf-thumb-check {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdf-thumb-stage.loading {
+    animation: none;
+  }
+}

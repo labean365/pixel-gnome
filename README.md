@@ -19,8 +19,11 @@ A lightweight, drag-and-drop image resizing tool that runs entirely in the brows
 - HEIC/HEIF input support
 - Animated GIF support (decode + encode)
 - ZIP export of batches, with a live image-count / output-size readout
+- Client-side PDF toolkit (lazy-loaded, nothing uploaded):
+  - **Compress** — structural optimization that recompresses embedded images, strips metadata, subsets fonts, and garbage-collects while keeping the text layer selectable (presets + advanced quality/structure controls, before/after size readout)
+  - **Organize** — extract selected pages to a new PDF, remove pages, or split into multiple files (downloaded as a ZIP), all from a page-thumbnail selection grid
 - Light/dark theme
-- Single-file build option for portable offline use
+- Single-file build option for portable offline use (PDF features excluded — the engine wasm can't be inlined)
 
 ## Tech stack
 

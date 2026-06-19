@@ -13,23 +13,26 @@
  *   IN:  { type: 'pdf-info',     id, bytes }
  *   IN:  { type: 'pdf-optimize', id, bytes, options }
  *   IN:  { type: 'pdf-preview',  id, bytes, pageIndex, scale }
+ *   IN:  { type: 'pdf-extract',  id, bytes, pages }        // P2: pages to KEEP
+ *   IN:  { type: 'pdf-split',    id, bytes, ranges }       // P2: page-index groups
  *   OUT: { type: 'info',     id, info }
  *   OUT: { type: 'progress', id, done, total }      // emitted during optimize
- *   OUT: { type: 'result',   id, bytes, outputSize } // optimize result
+ *   OUT: { type: 'result',   id, bytes, outputSize } // optimize / extract result
+ *   OUT: { type: 'splitResult', id, parts, sizes }   // P2: array of PDF byte arrays
  *   OUT: { type: 'preview',  id, png, width, height } // transferable PNG bytes
  *   OUT: { type: 'error',    id, message }
  *
  * Worker globals (`self`, `postMessage`, `ImageBitmap`, etc.) come from the flat
  * ESLint config's worker-globals override for src/modules/**\/*-worker.js.
  *
- * STATUS: live. getInfo/optimize/renderPagePreview are implemented in
- * pdf-engine.js (MuPDF, Approach B). The P1 optimize path (pdf-info /
- * pdf-optimize / pdf-preview) is wired to the UI via pdf-ui.js. The Phase 2+
- * engine methods (merge/split/extractPages/imagesToPdf/pdfToImages) still throw
- * NotImplementedError and surface via the 'error' message.
+ * STATUS: live. getInfo/optimize/renderPagePreview (P1) and extractPages/split
+ * (P2 organize) are implemented in pdf-engine.js (MuPDF, Approach B) and wired to
+ * the UI via pdf-ui.js. The remaining engine methods (merge/imagesToPdf/
+ * pdfToImages) still throw NotImplementedError and surface via the 'error'
+ * message.
  */
 
-import { getInfo, optimize, renderPagePreview } from './pdf-engine.js';
+import { getInfo, optimize, renderPagePreview, extractPages, split } from './pdf-engine.js';
 
 /**
  * Copy bytes into a fresh, transferable ArrayBuffer.
@@ -79,6 +82,27 @@ self.onmessage = async function (e) {
         );
         const pngOut = toTransferable(png);
         self.postMessage({ type: 'preview', id, png: pngOut, width, height }, [pngOut.buffer]);
+        break;
+      }
+
+      case 'pdf-extract': {
+        // Extract (or, by passing the pages to KEEP, remove) into one new PDF.
+        const out = toTransferable(await extractPages(msg.bytes, msg.pages));
+        self.postMessage({ type: 'result', id, bytes: out, outputSize: out.byteLength }, [
+          out.buffer,
+        ]);
+        break;
+      }
+
+      case 'pdf-split': {
+        // One new PDF per range; transfer every part's buffer in a single message.
+        const results = await split(msg.bytes, msg.ranges);
+        const parts = results.map(toTransferable);
+        const sizes = parts.map((p) => p.byteLength);
+        self.postMessage(
+          { type: 'splitResult', id, parts, sizes },
+          parts.map((p) => p.buffer)
+        );
         break;
       }
 

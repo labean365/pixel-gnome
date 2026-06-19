@@ -242,7 +242,90 @@ export async function renderPagePreview(bytes, pageIndex, scale = 0.3) {
   return { png: pix.asPNG(), width: pix.getWidth(), height: pix.getHeight() };
 }
 
-// ---- Phase 2+ operations (organize / convert) — signatures reserved ----
+// ---- P2 — Organize (extract / split / remove) ----
+
+/**
+ * Build a NEW PDF containing `pages` (0-based, in the given order) copied from
+ * an already-open source document. Page copying uses a graft map so shared
+ * resources (fonts, images) are copied once and de-duplicated, and text/vector
+ * content is preserved exactly — this is a structural copy, never a raster.
+ *
+ * @param {typeof import('mupdf')} mupdf
+ * @param {import('mupdf').PDFDocument} srcPdf  An open source PDFDocument.
+ * @param {number[]} pages  0-based page indices, in output order.
+ * @returns {Uint8Array}
+ */
+function subsetDoc(mupdf, srcPdf, pages) {
+  const dst = new mupdf.PDFDocument();
+  // One graft map per destination de-dupes resources shared across the pages.
+  const map = dst.newGraftMap();
+  for (const p of pages) {
+    // `to = -1` appends the grafted page at the end of the destination.
+    map.graftPage(-1, srcPdf, p);
+  }
+  // garbage=4 renumbers + merges duplicate objects/streams; deflate compresses.
+  return dst.saveToBuffer('garbage=4,deflate=yes').asUint8Array();
+}
+
+/**
+ * Validate a list of 0-based page indices against a page count.
+ * @param {unknown} pages
+ * @param {number} pageCount
+ * @param {string} method
+ * @returns {number[]} The validated indices (a copy).
+ */
+function assertPages(pages, pageCount, method) {
+  if (!Array.isArray(pages) || pages.length === 0) {
+    throw new TypeError(`pdf-engine.${method}: expected a non-empty array of page indices.`);
+  }
+  const out = [];
+  for (const p of pages) {
+    if (!Number.isInteger(p) || p < 0 || p >= pageCount) {
+      throw new RangeError(
+        `pdf-engine.${method}: page index ${p} is out of range (0–${pageCount - 1}).`
+      );
+    }
+    out.push(p);
+  }
+  return out;
+}
+
+/**
+ * Extract a subset of pages into a single new PDF, preserving text/vectors.
+ * Also serves "remove pages" — the caller passes the pages to KEEP.
+ * @param {Uint8Array} bytes
+ * @param {number[]} pages  0-based indices, in the desired output order.
+ * @returns {Promise<Uint8Array>}
+ */
+export async function extractPages(bytes, pages) {
+  assertBytes(bytes, 'extractPages');
+  const mupdf = await loadEngine();
+  const pdf = openPdf(mupdf, bytes);
+  const valid = assertPages(pages, pdf.countPages(), 'extractPages');
+  return subsetDoc(mupdf, pdf, valid);
+}
+
+/**
+ * Split a PDF into multiple new PDFs — one per range. Each range is a list of
+ * 0-based page indices; the source is opened once and copied range-by-range.
+ * @param {Uint8Array} bytes
+ * @param {number[][]} ranges  Array of page-index groups; each group → one doc.
+ * @returns {Promise<Uint8Array[]>}
+ */
+export async function split(bytes, ranges) {
+  assertBytes(bytes, 'split');
+  if (!Array.isArray(ranges) || ranges.length === 0) {
+    throw new TypeError('pdf-engine.split: expected a non-empty array of page-index ranges.');
+  }
+  const mupdf = await loadEngine();
+  const pdf = openPdf(mupdf, bytes);
+  const pageCount = pdf.countPages();
+  return ranges.map((group, i) =>
+    subsetDoc(mupdf, pdf, assertPages(group, pageCount, `split[range ${i}]`))
+  );
+}
+
+// ---- Phase 3+ operations (merge / convert) — signatures reserved ----
 
 /** @returns {Promise<Uint8Array>} Concatenate multiple PDFs into one. */
 export async function merge(docs) {
@@ -250,20 +333,6 @@ export async function merge(docs) {
     throw new TypeError('pdf-engine.merge: expected a non-empty array of PDF byte arrays.');
   }
   throw new NotImplementedError('merge');
-}
-
-/** @returns {Promise<Uint8Array[]>} Split a PDF into multiple documents. */
-export async function split(bytes, ranges) {
-  assertBytes(bytes, 'split');
-  void ranges;
-  throw new NotImplementedError('split');
-}
-
-/** @returns {Promise<Uint8Array>} Extract a subset of pages into a new PDF. */
-export async function extractPages(bytes, pages) {
-  assertBytes(bytes, 'extractPages');
-  void pages;
-  throw new NotImplementedError('extractPages');
 }
 
 /** @returns {Promise<Uint8Array>} Combine images (already resized/compressed) into a PDF. */

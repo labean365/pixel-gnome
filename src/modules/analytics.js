@@ -38,6 +38,17 @@ export function trackPdfOptimized({ reductionPct }) {
   push({ event: 'pdf_optimized', reduction_pct: bucketReduction(reductionPct) });
 }
 
+/**
+ * Fire when a PDF organize operation completes. Content-free: only which
+ * operation ran (extract / remove / split) — never filenames, page contents,
+ * or counts that could fingerprint a document. No-ops without window.dataLayer
+ * (e.g. the portable single-file build), like the events above.
+ * @param {{ op: 'extract' | 'remove' | 'split' }} info
+ */
+export function trackPdfOrganized({ op }) {
+  push({ event: 'pdf_organized', pdf_op: String(op || '') });
+}
+
 /** Bucket the % reduction so analytics never carries a precise per-file value. */
 function bucketReduction(pct) {
   if (typeof pct !== 'number' || pct <= 0) return '0';
