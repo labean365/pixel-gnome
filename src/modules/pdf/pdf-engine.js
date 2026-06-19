@@ -26,16 +26,6 @@
  *   - pdf.subsetFonts(); pdf.saveToBuffer('garbage=4,deflate=yes') → Buffer
  */
 
-// Static import so the bundler pulls MuPDF (and its `mupdf-wasm.wasm`, located
-// via `new URL('mupdf-wasm.wasm', import.meta.url)`) into the worker chunk and
-// emits the wasm as an asset. A dynamic `import('mupdf')` is left unresolved by
-// the build (bare specifier) and the wasm is never emitted, so the engine fails
-// to load in production. Laziness is preserved at the worker level: this module
-// only evaluates when pdf-worker.js is instantiated, which happens on first PDF
-// use. MuPDF uses top-level await, so the worker must be an ES module
-// (worker.format 'es' + new Worker(..., { type: 'module' })).
-import * as mupdfModule from 'mupdf';
-
 export const PDF_ENGINE = 'mupdf';
 
 /**
@@ -74,7 +64,18 @@ let _engine = null;
  */
 export async function loadEngine() {
   if (!_engine) {
-    _engine = mupdfModule;
+    // The DYNAMIC import here is deliberate and load-bearing — do not convert it to
+    // a static top-level `import` of 'mupdf'. MuPDF uses top-level await, and a module
+    // worker whose ENTRY import graph contains top-level await never finishes starting
+    // up (it stalls forever and never handles messages — the "engine failed to load" /
+    // hang we hit in production). Importing MuPDF lazily here keeps pdf-worker.js's entry
+    // graph TLA-free; MuPDF loads as a code-split chunk on first PDF use.
+    //
+    // This still bundles correctly (chunk + wasm emitted) ONLY because the worker is
+    // created with the inline `new Worker(new URL('./pdf-worker.js', import.meta.url),
+    // { type: 'module' })` form in pdf-ui.js, with `worker.format: 'es'` in
+    // vite.config.js enabling code-splitting inside the worker.
+    _engine = await import('mupdf');
   }
   return _engine;
 }
