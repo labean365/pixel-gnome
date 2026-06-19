@@ -67,12 +67,14 @@ function ensureWorker() {
   if (worker) return true;
   if (!isPdfSupported()) return false;
   try {
-    const workerUrl = new URL('./pdf-worker.js', import.meta.url);
     const base = import.meta.url;
     if (base.startsWith('data:') || base.startsWith('blob:') || base.startsWith('file:')) {
       return false;
     }
-    worker = new Worker(workerUrl, { type: 'module' });
+    // The `new URL(...)` MUST be inline inside `new Worker(...)` — the bundler
+    // only detects and emits the worker chunk for this exact form (a hoisted
+    // `const url = new URL(...)` is left unresolved and 404s in production).
+    worker = new Worker(new URL('./pdf-worker.js', import.meta.url), { type: 'module' });
     worker.onmessage = onWorkerMessage;
     worker.onerror = () => {
       // Fail every in-flight job; the modal surfaces the error.

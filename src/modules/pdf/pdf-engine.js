@@ -26,6 +26,16 @@
  *   - pdf.subsetFonts(); pdf.saveToBuffer('garbage=4,deflate=yes') → Buffer
  */
 
+// Static import so the bundler pulls MuPDF (and its `mupdf-wasm.wasm`, located
+// via `new URL('mupdf-wasm.wasm', import.meta.url)`) into the worker chunk and
+// emits the wasm as an asset. A dynamic `import('mupdf')` is left unresolved by
+// the build (bare specifier) and the wasm is never emitted, so the engine fails
+// to load in production. Laziness is preserved at the worker level: this module
+// only evaluates when pdf-worker.js is instantiated, which happens on first PDF
+// use. MuPDF uses top-level await, so the worker must be an ES module
+// (worker.format 'es' + new Worker(..., { type: 'module' })).
+import * as mupdfModule from 'mupdf';
+
 export const PDF_ENGINE = 'mupdf';
 
 /**
@@ -64,7 +74,7 @@ let _engine = null;
  */
 export async function loadEngine() {
   if (!_engine) {
-    _engine = await import(/* @vite-chunkName: pdf-engine */ 'mupdf');
+    _engine = mupdfModule;
   }
   return _engine;
 }
