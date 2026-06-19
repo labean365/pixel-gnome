@@ -350,15 +350,48 @@ export async function merge(docs) {
   return dst.saveToBuffer('garbage=4,deflate=yes').asUint8Array();
 }
 
-// ---- Phase 3+ operations (convert) — signatures reserved ----
+// ---- P3 — Images → PDF ----
 
-/** @returns {Promise<Uint8Array>} Combine images (already resized/compressed) into a PDF. */
+/**
+ * Combine images into a PDF — one image per page, each page sized to its image
+ * (image pixels mapped 1:1 to PDF points). The image bytes MUST be a format
+ * MuPDF decodes natively — JPEG or PNG. Callers normalize other formats
+ * (WebP/AVIF/GIF) to PNG/JPEG before calling (the browser can decode anything;
+ * MuPDF's wasm build can't). JPEG inputs embed as DCTDecode (kept compact);
+ * PNG inputs are re-stored losslessly.
+ * @param {Uint8Array[]} images  Encoded JPEG/PNG bytes, in page order.
+ * @returns {Promise<Uint8Array>}
+ */
 export async function imagesToPdf(images) {
   if (!Array.isArray(images) || images.length === 0) {
-    throw new TypeError('pdf-engine.imagesToPdf: expected a non-empty array of image blobs.');
+    throw new TypeError('pdf-engine.imagesToPdf: expected a non-empty array of image byte arrays.');
   }
-  throw new NotImplementedError('imagesToPdf');
+  const mupdf = await loadEngine();
+  const dst = new mupdf.PDFDocument();
+  images.forEach((bytes, i) => {
+    assertBytes(bytes, `imagesToPdf[image ${i}]`);
+    // Copy: MuPDF takes ownership of the backing buffer, so a caller that reused
+    // the same Uint8Array across images would otherwise get a corrupt/empty PDF.
+    const image = new mupdf.Image(bytes.slice());
+    const w = image.getWidth();
+    const h = image.getHeight();
+    if (!w || !h) throw new Error(`pdf-engine.imagesToPdf: image ${i} has no dimensions.`);
+    const ref = dst.addImage(image);
+    // Resources: /XObject << /Im0 <image ref> >>
+    const resources = dst.newDictionary();
+    const xobjects = dst.newDictionary();
+    xobjects.put('Im0', ref);
+    resources.put('XObject', xobjects);
+    // Content stream: scale the unit image up to the page (w × h) and draw it.
+    const contents = `q ${w} 0 0 ${h} 0 0 cm /Im0 Do Q`;
+    const page = dst.addPage([0, 0, w, h], 0, resources, contents);
+    dst.insertPage(-1, page); // -1 = append
+  });
+  // Deflate compresses content/PNG streams; JPEG image streams stay DCTDecode.
+  return dst.saveToBuffer('garbage=4,deflate=yes').asUint8Array();
 }
+
+// ---- Phase 4 operations (convert) — signatures reserved ----
 
 /** @returns {Promise<Blob[]>} Rasterize pages to images (feeds the image pipeline). */
 export async function pdfToImages(bytes, options) {

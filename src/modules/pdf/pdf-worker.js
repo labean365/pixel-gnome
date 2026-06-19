@@ -16,6 +16,7 @@
  *   IN:  { type: 'pdf-extract',  id, bytes, pages }        // P2: pages to KEEP
  *   IN:  { type: 'pdf-split',    id, bytes, ranges }       // P2: page-index groups
  *   IN:  { type: 'pdf-merge',    id, docs }                // P2: PDF byte arrays, in order
+ *   IN:  { type: 'pdf-from-images', id, images }           // P3: JPEG/PNG byte arrays → PDF
  *   OUT: { type: 'info',     id, info }
  *   OUT: { type: 'progress', id, done, total }      // emitted during optimize
  *   OUT: { type: 'result',   id, bytes, outputSize } // optimize / extract result
@@ -33,7 +34,15 @@
  * message.
  */
 
-import { getInfo, optimize, renderPagePreview, extractPages, split, merge } from './pdf-engine.js';
+import {
+  getInfo,
+  optimize,
+  renderPagePreview,
+  extractPages,
+  split,
+  merge,
+  imagesToPdf,
+} from './pdf-engine.js';
 
 /**
  * Copy bytes into a fresh, transferable ArrayBuffer.
@@ -112,6 +121,15 @@ self.onmessage = async function (e) {
         // are structure-cloned (not transferred) so the caller's merge list stays
         // intact for re-merging; only the result buffer is transferred back.
         const out = toTransferable(await merge(msg.docs));
+        self.postMessage({ type: 'result', id, bytes: out, outputSize: out.byteLength }, [
+          out.buffer,
+        ]);
+        break;
+      }
+
+      case 'pdf-from-images': {
+        // One page per image (msg.images = JPEG/PNG byte arrays, in order).
+        const out = toTransferable(await imagesToPdf(msg.images));
         self.postMessage({ type: 'result', id, bytes: out, outputSize: out.byteLength }, [
           out.buffer,
         ]);

@@ -54,7 +54,7 @@ import { exportMultiSizeZip } from './modules/responsive-export.js';
 import { initKeyboardShortcuts } from './modules/keyboard-shortcuts.js';
 import { initPrivacyModal } from './modules/privacy-modal.js';
 import { initConsentBanner } from './modules/consent-banner.js';
-import { openPdfModal, isPdfSupported } from './modules/pdf/pdf-ui.js';
+import { openPdfModal, isPdfSupported, imagesToPdfBlob } from './modules/pdf/pdf-ui.js';
 import { trackImageProcessed, trackExport } from './modules/analytics.js';
 import { isGifFile, isAnimatedGif } from './modules/gif-detect.js';
 import {
@@ -223,6 +223,14 @@ for (const chip of document.querySelectorAll('.content-empty-chip')) {
 document.getElementById('exportBtn').addEventListener('click', () => handleExportAll());
 document.getElementById('exportZipBtn').addEventListener('click', () => handleExportZip());
 document.getElementById('exportResponsiveBtn').addEventListener('click', handleExportResponsive);
+
+// "Combine into PDF" — only when the PDF feature is compiled in (excluded from
+// the portable single-file build). Reveal the button, otherwise it stays hidden.
+const exportPdfBtn = document.getElementById('exportPdfBtn');
+if (exportPdfBtn && isPdfSupported()) {
+  exportPdfBtn.hidden = false;
+  exportPdfBtn.addEventListener('click', () => handleExportPdf());
+}
 
 // Step 3 export mirrors — same handlers as the preview toolbar (Phase 3).
 const exportStep3Btn = document.getElementById('exportStep3Btn');
@@ -1531,6 +1539,74 @@ async function handleExportZip(idsFilter) {
     hideProgress();
     showToast(t('toast.zipFailed', { message: err.message }), 'error');
     console.error('PixelGnome: ZIP export failed:', err);
+  }
+}
+
+/**
+ * Combine all processed images into a single PDF (one image per page, in queue
+ * order). Mirrors handleExportZip's lifecycle: build → download → mark exported
+ * → history → remove from queue.
+ * @param {Set<string>} [idsFilter]
+ */
+async function handleExportPdf(idsFilter) {
+  const items = idsFilter
+    ? Array.from(idsFilter)
+        .map((id) => imageQueue.get(id))
+        .filter(Boolean)
+    : Array.from(imageQueue.values());
+  const successItems = items.filter((i) => i.result);
+
+  if (successItems.length === 0) {
+    const subject = idsFilter ? t('toast.subjectSelected') : t('toast.subjectProcessed');
+    showToast(t('toast.noToExport', { subject }), 'warning');
+    return;
+  }
+
+  const settings = getProcessSettings();
+  const pattern = getPattern();
+
+  showToast(t('toast.pdfBuilding', { count: successItems.length }), 'info', 3000);
+  announce(t('announce.creatingPdf'));
+
+  try {
+    const blob = await imagesToPdfBlob(successItems.map((i) => i.result.blob));
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    downloadBlob(blob, `pixelgnome-${timestamp}.pdf`);
+
+    const idsToRemove = [];
+    for (const item of successItems) {
+      markPreviewCardExported(item.id);
+      const filename = buildOutputFilename(item.file.name, pattern, settings.format, {
+        width: item.result.outputWidth,
+        height: item.result.outputHeight,
+        preset: settings.presetId,
+      });
+      addToHistory(item, filename, settings);
+      idsToRemove.push(item.id);
+    }
+
+    trackExport({ format: 'pdf', count: successItems.length, isZip: true });
+
+    showToast(t('toast.pdfExported', { count: successItems.length }), 'success');
+    announce(t('announce.pdfDownloaded', { count: successItems.length }));
+    flashExportConfirm();
+
+    setTimeout(() => {
+      for (const id of idsToRemove) {
+        imageQueue.delete(id);
+        removePreviewCard(id);
+      }
+      removeIdsFromSelection(idsToRemove);
+      updateBatchControls();
+      if (imageQueue.size === 0) {
+        dropZoneEl.classList.remove('has-images');
+      }
+    }, 1200);
+  } catch (err) {
+    hideProgress();
+    showToast(t('toast.pdfFailed', { message: err.message }), 'error');
+    console.error('PixelGnome: PDF export failed:', err);
   }
 }
 

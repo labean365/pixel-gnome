@@ -208,6 +208,56 @@ export async function openPdfModal(file, opts = {}) {
   }
 }
 
+/**
+ * Build one PDF from a list of image Blobs — one image per page, each page sized
+ * to its image. Powers the image-export "Combine into PDF" action; it drives the
+ * same lazy pdf-worker as the modal, but headless (no UI).
+ *
+ * MuPDF's wasm build only decodes JPEG/PNG, so each blob is normalized first:
+ * JPEG/PNG pass through untouched (lossless, and JPEG stays compact DCTDecode);
+ * anything else (WebP/AVIF/GIF/…) is re-encoded to JPEG over a white background
+ * via canvas (the browser can decode any format). Transparency is flattened.
+ * @param {Blob[]} blobs  Processed image blobs, in page order.
+ * @returns {Promise<Blob>} an application/pdf blob.
+ */
+export async function imagesToPdfBlob(blobs) {
+  if (!isPdfSupported()) throw new Error(t('pdf.errorUnsupported'));
+  if (!Array.isArray(blobs) || blobs.length === 0) throw new Error(t('pdf.img.errNone'));
+  const images = [];
+  for (const blob of blobs) images.push(await normalizeForPdf(blob));
+  const res = await call('pdf-from-images', { images });
+  const bytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes);
+  return new Blob([bytes], { type: 'application/pdf' });
+}
+
+/** JPEG/PNG → raw bytes (pass-through); any other format → JPEG bytes via canvas. */
+async function normalizeForPdf(blob) {
+  const type = blob.type || '';
+  if (type === 'image/jpeg' || type === 'image/png') {
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+  const bitmap = await createImageBitmap(blob);
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; // flatten transparency to white for the page
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, 0, 0);
+    const out = await new Promise((resolve, reject) =>
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error('image encode failed'))),
+        'image/jpeg',
+        0.92
+      )
+    );
+    return new Uint8Array(await out.arrayBuffer());
+  } finally {
+    bitmap.close?.();
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Rendering                                                          */
 /* ------------------------------------------------------------------ */

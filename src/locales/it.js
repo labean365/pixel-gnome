@@ -112,6 +112,9 @@ export default {
       done: { one: 'Uniti — {count} pagina · {size}', other: 'Uniti — {count} pagine · {size}' },
       errFile: 'Impossibile aggiungere “{name}” — non è un PDF leggibile.',
     },
+    img: {
+      errNone: 'Nessuna immagine elaborata da combinare in un PDF.',
+    },
   },
 
   privacyNote:
@@ -244,6 +247,8 @@ export default {
     responsiveZipTip: 'Esporta tutte le immagini in più dimensioni come ZIP',
     downloadZip: 'Scarica ZIP',
     downloadZipTip: 'Esporta tutte le immagini come un unico archivio ZIP',
+    downloadPdf: 'PDF',
+    downloadPdfTip: 'Combina tutte le immagini in un unico PDF (un’immagine per pagina)',
     download: 'Scarica',
     downloadTip: 'Scarica singolarmente tutte le immagini elaborate',
     progressAria: 'Avanzamento elaborazione batch',
@@ -357,6 +362,15 @@ export default {
       one: 'ZIP esportato con {count} immagine.',
       other: 'ZIP esportato con {count} immagini.',
     },
+    pdfBuilding: {
+      one: 'Creazione del PDF da {count} immagine…',
+      other: 'Creazione del PDF da {count} immagini…',
+    },
+    pdfExported: {
+      one: 'PDF esportato con {count} pagina.',
+      other: 'PDF esportato con {count} pagine.',
+    },
+    pdfFailed: 'Esportazione PDF non riuscita: {message}',
     generatingVariants: 'Generazione di {variants} varianti in {sizes} dimensioni...',
     responsiveExported: {
       one: 'ZIP responsive esportato: {count} immagine × {sizes} dimensioni.',
@@ -389,6 +403,8 @@ export default {
     downloaded: 'Scaricato {filename}',
     creatingZip: 'Creazione archivio ZIP.',
     zipDownloaded: 'ZIP scaricato con {count} immagini.',
+    creatingPdf: 'Creazione del PDF.',
+    pdfDownloaded: 'PDF scaricato con {count} pagine.',
     creatingResponsive: 'Creazione esportazione responsive.',
     responsiveDownloaded: 'ZIP responsive scaricato con {count} varianti.',
     allCleared: 'Tutte le immagini cancellate.',

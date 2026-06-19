@@ -107,6 +107,9 @@ export default {
       done: { one: 'Merged — {count} page · {size}', other: 'Merged — {count} pages · {size}' },
       errFile: 'Couldn’t add “{name}” — not a readable PDF.',
     },
+    img: {
+      errNone: 'No processed images to combine into a PDF.',
+    },
   },
 
   privacyNote: 'Images are processed locally in your browser — nothing is uploaded or stored.',
@@ -236,6 +239,8 @@ export default {
     responsiveZipTip: 'Export all images at multiple sizes as a ZIP',
     downloadZip: 'Download ZIP',
     downloadZipTip: 'Export all images as a single ZIP archive',
+    downloadPdf: 'PDF',
+    downloadPdfTip: 'Combine all images into one PDF (one image per page)',
     download: 'Download',
     downloadTip: 'Download all processed images individually',
     progressAria: 'Batch processing progress',
@@ -340,6 +345,15 @@ export default {
       one: 'ZIP exported with {count} image.',
       other: 'ZIP exported with {count} images.',
     },
+    pdfBuilding: {
+      one: 'Building PDF from {count} image…',
+      other: 'Building PDF from {count} images…',
+    },
+    pdfExported: {
+      one: 'PDF exported with {count} page.',
+      other: 'PDF exported with {count} pages.',
+    },
+    pdfFailed: 'PDF export failed: {message}',
     generatingVariants: 'Generating {variants} variants across {sizes} sizes...',
     responsiveExported: {
       one: 'Responsive ZIP exported: {count} image × {sizes} sizes.',
@@ -372,6 +386,8 @@ export default {
     downloaded: 'Downloaded {filename}',
     creatingZip: 'Creating ZIP archive.',
     zipDownloaded: 'ZIP downloaded with {count} images.',
+    creatingPdf: 'Creating PDF.',
+    pdfDownloaded: 'PDF downloaded with {count} pages.',
     creatingResponsive: 'Creating responsive export.',
     responsiveDownloaded: 'Responsive ZIP downloaded with {count} variants.',
     allCleared: 'All images cleared.',
