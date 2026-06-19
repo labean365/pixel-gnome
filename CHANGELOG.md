@@ -1,4 +1,4 @@
-# PixelDrop — Changelog
+# PixelGnome — Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -7,6 +7,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ---
 
 ## [Unreleased]
+
+## [v0.24.0-rc] — 2026-06-19
+
+### PDF toolkit — compress, organize, merge, and convert PDFs, all client-side
+
+The headline feature: PixelGnome now handles **PDFs** end to end, entirely in the browser via a lazily-loaded MuPDF (WebAssembly) engine. Nothing is uploaded — the same privacy promise as the image tools. The engine runs in a dedicated Web Worker off the main thread, and the whole PDF feature is excluded from the portable single-file build (the multi-MB wasm can't be inlined).
+
+#### Added
+
+- **Compress / Optimize (P1).** Drop a PDF to shrink it via true structural optimization (Approach B): recompress embedded raster images, strip metadata, subset fonts, and garbage-collect — while **preserving the selectable text layer and vector content** (never rasterized). Presets (Email / Web / Max) plus an Advanced panel (quality slider + per-step toggles), a multi-page preview, and an honest before/after size readout.
+- **Organize (P2).** From a page-thumbnail selection grid: **extract** selected pages to a new PDF, **remove** selected pages (keep the rest), or **split** into multiple files (every page, or custom ranges like `1-3, 5, 8-10`) delivered as a ZIP.
+- **Merge (P2).** Combine multiple PDFs into one with a reorderable file list (move up/down, remove); dropping several PDFs at once opens Merge with them preloaded.
+- **Images → PDF (P3).** Combine your processed images into a single PDF (one image per page, at each image's size) straight from the export bar.
+- **PDF → images (P4).** Rasterize every page to PNG or JPEG at a chosen resolution (Screen 96 / Standard 150 / Print 300 DPI) — download as a ZIP, or send the pages into the editor queue for further resizing/converting, closing the round-trip between the PDF and image pipelines.
+- Italian (it) translations for all PDF strings; content-free, consent-gated analytics events (`pdf_optimized`, `pdf_organized`, `pdf_merged`, `pdf_rasterized`) carrying only coarse, non-identifying values.
+
+#### Engineering / hardening
+
+- New module boundary `src/modules/pdf/`: a thin `pdf-engine.js` adapter (the only file that imports MuPDF) behind `pdf-worker.js`, driven by `pdf-ui.js`. Swapping the backend means rewriting one file.
+- Build-contract smoke test (`scripts/check-pdf-build.mjs`, wired into `npm run verify`, the pre-push hook, and CI) asserts the production build emits the worker + a separate MuPDF code-split chunk + the wasm, and that the single-file build excludes all of it — guarding the two outage classes hit during P1 (an undetected worker chunk; top-level await in the worker entry graph).
+- `NOTICE` file credits Artifex/MuPDF (AGPL); README documents the runtime dependency and the new features.
+
+#### Fixed
+
+- PDF **Merge** tab label showed the raw i18n key (`pdf.mode.merge`) because the string was never added; the label (and the new To-Images label) are now present in English and Italian.
 
 ## [v0.23.0-rc] — 2026-06-16
 
