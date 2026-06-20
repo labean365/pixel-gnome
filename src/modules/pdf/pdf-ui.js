@@ -689,7 +689,7 @@ function rotateSelected(dir) {
   if (selectedPages.size === 0) return;
   const delta = dir === 'ccw' ? -90 : 90;
   for (const orig of selectedPages) {
-    const next = (((rotations.get(orig) || 0) + delta) % 360 + 360) % 360;
+    const next = ((((rotations.get(orig) || 0) + delta) % 360) + 360) % 360;
     if (next === 0) rotations.delete(orig);
     else rotations.set(orig, next);
     const stage = backdrop?.querySelector(`.pdf-thumb[data-page="${orig}"] .pdf-thumb-stage`);
@@ -724,7 +724,13 @@ function updateSelectionUI() {
 /** Enable/disable selection actions (rotate / delete / extract / remove). */
 function setSelectionActionsDisabled(disabled) {
   const noSel = selectedPages.size === 0;
-  for (const id of ['pdfRotateCcwBtn', 'pdfRotateCwBtn', 'pdfDeleteBtn', 'pdfExtractBtn', 'pdfRemoveBtn']) {
+  for (const id of [
+    'pdfRotateCcwBtn',
+    'pdfRotateCwBtn',
+    'pdfDeleteBtn',
+    'pdfExtractBtn',
+    'pdfRemoveBtn',
+  ]) {
     const el = byId(id);
     if (el) el.disabled = disabled || noSel;
   }

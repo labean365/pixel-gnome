@@ -38,7 +38,7 @@ export default {
   },
 
   pdf: {
-    dialogAria: 'PDF optimization',
+    dialogAria: 'Edit PDF',
     title: 'Optimize PDF',
     close: 'Close',
     closeAria: 'Close PDF optimizer',
@@ -51,7 +51,7 @@ export default {
       errDeleteAll: 'Can’t delete every page.',
       reset: 'Reset',
       export: 'Export',
-      apply: 'Apply changes',
+      apply: 'Apply',
       applying: 'Applying changes…',
       exporting: 'Preparing export…',
       preflight: '{kept} of {total} pages · {rotated} rotated · original unchanged',

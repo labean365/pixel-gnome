@@ -39,7 +39,7 @@ export default {
   },
 
   pdf: {
-    dialogAria: 'Ottimizzazione PDF',
+    dialogAria: 'Modifica PDF',
     title: 'Ottimizza PDF',
     close: 'Chiudi',
     closeAria: 'Chiudi l’ottimizzatore PDF',
@@ -52,7 +52,7 @@ export default {
       errDeleteAll: 'Impossibile eliminare tutte le pagine.',
       reset: 'Ripristina',
       export: 'Esporta',
-      apply: 'Applica modifiche',
+      apply: 'Applica',
       applying: 'Applicazione delle modifiche…',
       exporting: 'Preparazione dell’esportazione…',
       preflight: '{kept} di {total} pagine · {rotated} ruotate · originale invariato',
