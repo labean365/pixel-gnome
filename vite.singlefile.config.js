@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import fs from 'fs';
 import path from 'path';
+import { injectVersion } from './scripts/vite-inject-version.js';
 
 // Belt-and-suspenders to the VITE_PDF_ENABLED flag below: physically keep the
 // PDF engine and the `mupdf` wasm out of the single-file bundle by replacing
@@ -50,6 +51,7 @@ export default defineConfig({
     plugins: () => [excludePdfPlugin()],
   },
   plugins: [
+    injectVersion(),
     excludePdfPlugin(),
     viteSingleFile(),
     {

@@ -60,10 +60,11 @@ import {
   openPdfModal,
   isPdfSupported,
   imagesToPdfBlob,
+  combineMixedToPdf,
   setImageImportHandler,
   getPdfCardMeta,
 } from './modules/pdf/pdf-ui.js';
-import { trackImageProcessed, trackExport } from './modules/analytics.js';
+import { trackImageProcessed, trackExport, trackPdfMerged } from './modules/analytics.js';
 import { isGifFile, isAnimatedGif } from './modules/gif-detect.js';
 import {
   isPngFile,
@@ -300,6 +301,15 @@ const bulkZipBtn = document.getElementById('bulkZipBtn');
 if (bulkDownloadBtn) bulkDownloadBtn.addEventListener('click', () => handleBulkDownload());
 if (bulkZipBtn) bulkZipBtn.addEventListener('click', () => handleBulkExportZip());
 
+// Bulk "Combine to PDF" (C4) — only when the PDF feature is compiled in (it's
+// excluded from the portable single-file build). Reveal + wire it; otherwise it
+// stays hidden, mirroring exportPdfBtn above.
+const bulkCombinePdfBtn = document.getElementById('bulkCombinePdfBtn');
+if (bulkCombinePdfBtn && isPdfSupported()) {
+  bulkCombinePdfBtn.hidden = false;
+  bulkCombinePdfBtn.addEventListener('click', () => handleBulkCombinePdf());
+}
+
 initHistory();
 
 // Phase 10: Global keyboard shortcuts
@@ -474,15 +484,17 @@ function slowOpHint(file, animatedGif) {
 // --- Select / Deselect controls ---
 
 function updateBatchControls() {
-  const count = imageQueue.size;
+  // Multi-select spans both queues (C4) — gate on the combined card count so a
+  // PDF-only or mixed workspace also gets the per-card toggles + bulk toolbar.
+  const count = imageQueue.size + pdfQueue.size;
   const multi = count >= 2;
   selectAllBtn.hidden = !multi;
   deselectAllBtn.hidden = !multi;
 
   // Multi-select (per-card toggles + bulk toolbar) only makes sense with 2+
-  // images. Gate the whole pathway: reveal the toggles via a list class, and
-  // drop any lingering selection if we've fallen back to a single image so the
-  // bulk toolbar can't stay open over a one-image workflow.
+  // files. Gate the whole pathway: reveal the toggles via a list class, and
+  // drop any lingering selection if we've fallen back to a single file so the
+  // bulk toolbar can't stay open over a one-file workflow.
   if (previewListEl) previewListEl.classList.toggle('multi-enabled', multi);
   if (!multi && selectedIds.size > 0) clearSelection();
 
@@ -598,14 +610,60 @@ function flashExportConfirm() {
 }
 
 /**
- * Select all ids currently in the queue. Anchor becomes the first id so a
- * subsequent Shift-click produces an intuitive range.
+ * Walk the cards in #previewList in visual (DOM) order and return one entry per
+ * id — used by every mixed image+PDF path (C4) that must respect the order the
+ * cards actually appear in. Strips the `card-` id prefix and classifies each id
+ * via the two queues; cards belonging to neither queue are skipped.
+ * @returns {{ id: string, kind: 'image' | 'pdf',
+ *   item: import('./modules/batch-manager.js').BatchItem |
+ *     { id: string, file: File, kind: 'pdf', pdfMeta: object|null } }[]}
+ */
+function cardsInDomOrder() {
+  if (!previewListEl) return [];
+  const out = [];
+  for (const card of previewListEl.children) {
+    if (!card.id || !card.id.startsWith('card-')) continue;
+    const id = card.id.replace(/^card-/, '');
+    if (pdfQueue.has(id)) out.push({ id, kind: 'pdf', item: pdfQueue.get(id) });
+    else if (imageQueue.has(id)) out.push({ id, kind: 'image', item: imageQueue.get(id) });
+  }
+  return out;
+}
+
+/**
+ * Same as `cardsInDomOrder` but filtered to the current selection — the ordered
+ * source of truth for bulk download / combine / ZIP across both queues.
+ * @returns {ReturnType<typeof cardsInDomOrder>}
+ */
+function selectedInDomOrder() {
+  return cardsInDomOrder().filter((e) => selectedIds.has(e.id));
+}
+
+/**
+ * Tally how many images vs PDFs are currently selected. Drives the mixed count
+ * label and the rotate/flip disable rule (greyed when any PDF is selected).
+ * @returns {{ images: number, pdfs: number }}
+ */
+function selectionCounts() {
+  let images = 0;
+  let pdfs = 0;
+  for (const e of selectedInDomOrder()) {
+    if (e.kind === 'pdf') pdfs++;
+    else images++;
+  }
+  return { images, pdfs };
+}
+
+/**
+ * Select every card currently in the workspace (both queues), in DOM order.
+ * Anchor becomes the first card's id so a subsequent Shift-click produces an
+ * intuitive range.
  */
 function selectAllIds() {
   selectedIds.clear();
-  for (const id of imageQueue.keys()) selectedIds.add(id);
-  const first = imageQueue.keys().next();
-  selectionAnchor = first.done ? null : first.value;
+  const cards = cardsInDomOrder();
+  for (const { id } of cards) selectedIds.add(id);
+  selectionAnchor = cards.length > 0 ? cards[0].id : null;
   renderSelectionState();
 }
 
@@ -645,7 +703,8 @@ function toggleSelectOne(id) {
  * @param {string} toId - The id the user just clicked
  */
 function selectRange(fromId, toId) {
-  const ids = Array.from(imageQueue.keys());
+  // DOM order spans both queues so a range can cross image and PDF cards.
+  const ids = cardsInDomOrder().map((e) => e.id);
   const fromIdx = ids.indexOf(fromId);
   const toIdx = ids.indexOf(toId);
   if (fromIdx === -1 || toIdx === -1) {
@@ -701,9 +760,9 @@ function removeIdsFromSelection(ids) {
  * on known ids, no full re-query of the DOM.
  */
 function renderSelectionState() {
-  // Toggle .selected on every card. Walking the queue (not `querySelectorAll`)
-  // keeps this O(n) on queue size and safe against stale DOM nodes.
-  for (const id of imageQueue.keys()) {
+  // Toggle .selected on every card in both queues. Walking the queues (not
+  // `querySelectorAll`) keeps this O(n) and safe against stale DOM nodes.
+  for (const id of [...imageQueue.keys(), ...pdfQueue.keys()]) {
     const card = document.getElementById(`card-${id}`);
     if (!card) continue;
     const isSel = selectedIds.has(id);
@@ -725,8 +784,34 @@ function renderSelectionState() {
     bulkToolbarEl.hidden = count === 0;
   }
   if (bulkToolbarCountEl) {
-    bulkToolbarCountEl.textContent = `${count} selected`;
+    bulkToolbarCountEl.textContent = selectionCountLabel();
   }
+
+  // Rotate/flip don't apply to PDFs — grey them out (still visible) whenever the
+  // selection contains any PDF. Delete stays enabled (mixed delete is wired).
+  const counts = selectionCounts();
+  const blockEdits = counts.pdfs > 0;
+  for (const btn of [bulkRotateCcwBtn, bulkRotateCwBtn, bulkFlipHBtn, bulkFlipVBtn]) {
+    if (btn) btn.disabled = blockEdits;
+  }
+}
+
+/**
+ * Build the bulk-toolbar count label for the current selection. Picks an
+ * images-only, PDFs-only, or mixed phrasing and respects singular/plural — the
+ * `t()` helper only does `{var}` interpolation, so the plural choice is made
+ * here in JS.
+ * @returns {string}
+ */
+function selectionCountLabel() {
+  const { images, pdfs } = selectionCounts();
+  if (images > 0 && pdfs > 0) {
+    const imgPart = t('bulk.countImagesPart', { count: images });
+    const pdfPart = t('bulk.countPdfsPart', { count: pdfs });
+    return t('bulk.countMixed', { images: imgPart, pdfs: pdfPart });
+  }
+  if (pdfs > 0) return t('bulk.countPdfs', { count: pdfs });
+  return t('bulk.countImages', { count: images });
 }
 
 /**
@@ -861,7 +946,8 @@ if (previewListEl) {
       if (!card) return;
 
       const id = card.id.replace(/^card-/, '');
-      if (!imageQueue.has(id)) return;
+      // Accept both queues so PDF cards are selectable too (C4 mixed selection).
+      if (!imageQueue.has(id) && !pdfQueue.has(id)) return;
 
       // The visible select checkbox toggles selection on a plain click (no
       // modifier needed) — this is the discoverable path. Shift still extends
@@ -1000,6 +1086,9 @@ function addPdfCard(file) {
   );
   announce(t('announce.pdfAdded', { name: file.name }));
 
+  // Reveal the multi-select pathway once 2+ cards exist across both queues.
+  updateBatchControls();
+
   getPdfCardMeta(file)
     .then((meta) => {
       item.pdfMeta = meta;
@@ -1020,6 +1109,10 @@ function addPdfCard(file) {
 function removePdfCard(id) {
   pdfQueue.delete(id);
   removePreviewCard(id);
+  // Keep the selection + multi-select pathway in sync (the card may have been
+  // selected, and dropping below 2 cards should retract the toolbar).
+  removeFromSelection(id);
+  updateBatchControls();
   if (imageQueue.size === 0 && pdfQueue.size === 0) {
     dropZoneEl.classList.remove('has-images');
   }
@@ -1939,34 +2032,236 @@ function handleBulkFlip(axis) {
  */
 function handleBulkDelete() {
   if (selectedIds.size === 0) return;
+  // Split the selection by kind: images route through removeImagesWithUndo (so
+  // the Undo affordance restores them), PDFs through removePdfCard. PDFs don't
+  // get an Undo here — image undo is the established affordance and PDFs carry
+  // no reprocess state, so a single combined "Removed N" toast is enough.
+  const selected = selectedInDomOrder();
+  const imageIds = selected.filter((e) => e.kind === 'image').map((e) => e.id);
+  const pdfIds = selected.filter((e) => e.kind === 'pdf').map((e) => e.id);
   // removeImagesWithUndo snapshots first, so capturing the ids up front (before
   // handleRemove mutates selectedIds) keeps the set intact for the Undo.
-  removeImagesWithUndo(Array.from(selectedIds));
+  if (imageIds.length > 0) removeImagesWithUndo(imageIds);
+  for (const id of pdfIds) removePdfCard(id);
 }
 
 /**
- * Download-selected (flat): thin wrapper around `handleExportAll` that
- * restricts it to the current selection. All the toast + history + cleanup
- * logic is shared with the full-queue download path.
+ * Download-selected: each selected file in place. Images go through the existing
+ * `handleExportAll` path (filename builder + history + animated cleanup, all
+ * unchanged), PDFs are downloaded directly by their original `file`. An
+ * all-image selection delegates entirely to `handleExportAll` so its behavior is
+ * byte-for-byte unchanged from before C4.
  */
 function handleBulkDownload() {
   if (selectedIds.size === 0) {
     showToast(t('toast.noneSelected'), 'warning', 2000);
     return;
   }
-  handleExportAll(new Set(selectedIds));
+  const selected = selectedInDomOrder();
+  const pdfs = selected.filter((e) => e.kind === 'pdf');
+  const imageIds = selected.filter((e) => e.kind === 'image').map((e) => e.id);
+
+  // All images → unchanged legacy path.
+  if (pdfs.length === 0) {
+    handleExportAll(new Set(imageIds));
+    return;
+  }
+
+  // Mixed: download PDFs in place (their cards stay — PDFs carry no export
+  // lifecycle), then let handleExportAll handle the image subset (toast +
+  // history + card cleanup). When there are no images, surface a count toast.
+  for (const { item } of pdfs) downloadBlob(item.file, item.file.name);
+  if (imageIds.length > 0) {
+    handleExportAll(new Set(imageIds));
+  } else {
+    trackExport({ format: 'pdf', count: pdfs.length, isZip: false });
+    showToast(t('toast.exportedFiles', { count: pdfs.length }), 'success', 3500);
+    announce(t('toast.exportedFiles', { count: pdfs.length }));
+  }
 }
 
 /**
- * ZIP-selected: thin wrapper around `handleExportZip`. Returns the promise
- * so callers can await it if they need to — currently unused, but cheap.
+ * ZIP-selected: bundle the whole selection into one archive. Images ride the
+ * existing `handleExportZip` path; PDFs are appended via `exportAsZip`'s new
+ * `extraFiles` param (so everything lands in a single ZIP). An all-image
+ * selection delegates entirely to `handleExportZip` — unchanged behavior.
+ * @returns {Promise<void>}
  */
 function handleBulkExportZip() {
   if (selectedIds.size === 0) {
     showToast(t('toast.noneSelected'), 'warning', 2000);
     return Promise.resolve();
   }
-  return handleExportZip(new Set(selectedIds));
+  const selected = selectedInDomOrder();
+  const pdfs = selected.filter((e) => e.kind === 'pdf');
+  const imageIds = selected.filter((e) => e.kind === 'image').map((e) => e.id);
+
+  if (pdfs.length === 0) {
+    return handleExportZip(new Set(imageIds));
+  }
+  return handleMixedExportZip(
+    imageIds.map((id) => imageQueue.get(id)).filter(Boolean),
+    pdfs.map((e) => ({ name: e.item.file.name, blob: e.item.file }))
+  );
+}
+
+/**
+ * Mixed ZIP: zip image BatchItems + pre-named PDF files into one archive via
+ * `exportAsZip`'s `extraFiles`. Mirrors `handleExportZip`'s lifecycle (progress
+ * bar, exported marks, history, post-download cleanup) for the image subset; the
+ * PDF cards stay in place (PDFs carry no export lifecycle).
+ * @param {import('./modules/batch-manager.js').BatchItem[]} imageItems
+ * @param {{ name: string, blob: Blob }[]} extraFiles
+ */
+async function handleMixedExportZip(imageItems, extraFiles) {
+  const successItems = imageItems.filter((i) => i.result);
+  if (successItems.length === 0 && extraFiles.length === 0) {
+    showToast(t('toast.noToExport', { subject: t('toast.subjectSelected') }), 'warning');
+    return;
+  }
+
+  const settings = getProcessSettings();
+  const pattern = getPattern();
+  const total = successItems.length + extraFiles.length;
+
+  showToast(t('toast.zipping', { count: total }), 'info', 3000);
+  announce(t('announce.creatingZip'));
+  showProgressPercent(0, t('progress.zipping', { pct: 0 }));
+
+  try {
+    await exportAsZip(
+      successItems,
+      pattern,
+      settings.format,
+      (pct) => showProgressPercent(pct, t('progress.zipping', { pct: Math.round(pct) })),
+      extraFiles
+    );
+    hideProgress();
+
+    const idsToRemove = [];
+    for (const item of successItems) {
+      markPreviewCardExported(item.id);
+      const filename = buildOutputFilename(item.file.name, pattern, settings.format, {
+        width: item.result.outputWidth,
+        height: item.result.outputHeight,
+        preset: settings.presetId,
+      });
+      addToHistory(item, filename, settings);
+      idsToRemove.push(item.id);
+    }
+
+    trackExport({ format: settings.format, count: total, isZip: true });
+
+    showToast(t('toast.zipExported', { count: total }), 'success');
+    announce(t('announce.zipDownloaded', { count: total }));
+    flashExportConfirm();
+
+    setTimeout(() => {
+      for (const id of idsToRemove) {
+        imageQueue.delete(id);
+        removePreviewCard(id);
+      }
+      removeIdsFromSelection(idsToRemove);
+      updateBatchControls();
+      if (imageQueue.size === 0 && pdfQueue.size === 0) {
+        dropZoneEl.classList.remove('has-images');
+      }
+    }, 1200);
+  } catch (err) {
+    hideProgress();
+    showToast(t('toast.zipFailed', { message: err.message }), 'error');
+    console.error('PixelGnome: ZIP export failed:', err);
+  }
+}
+
+/**
+ * Combine-selected to one PDF (C4): build ordered entries in DOM order (images →
+ * pages, PDFs' pages inserted in place), call `combineMixedToPdf`, download the
+ * result, and mirror handleExportPdf's lifecycle (toast / history / cleanup).
+ * An all-image selection produces the same one-image-per-page PDF as before.
+ * @returns {Promise<void>}
+ */
+async function handleBulkCombinePdf() {
+  if (selectedIds.size === 0) {
+    showToast(t('toast.noneSelected'), 'warning', 2000);
+    return;
+  }
+  if (!isPdfSupported()) {
+    showToast(t('pdf.errorUnsupported'), 'error', 6000);
+    return;
+  }
+
+  // Build entries in DOM order. Images contribute only when they have a result;
+  // PDFs always contribute their current file.
+  const selected = selectedInDomOrder();
+  const entries = [];
+  const imageItemsExported = [];
+  for (const e of selected) {
+    if (e.kind === 'pdf') {
+      entries.push({ type: 'pdf', blob: e.item.file });
+    } else if (e.item.result) {
+      entries.push({ type: 'image', blob: e.item.result.blob });
+      imageItemsExported.push(e.item);
+    }
+  }
+
+  if (entries.length === 0) {
+    showToast(t('toast.noToExport', { subject: t('toast.subjectSelected') }), 'warning');
+    return;
+  }
+
+  const settings = getProcessSettings();
+  const pattern = getPattern();
+
+  showToast(t('bulk.combineBuilding', { count: entries.length }), 'info', 3000);
+  announce(t('announce.creatingPdf'));
+
+  try {
+    const blob = await combineMixedToPdf(entries);
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    downloadBlob(blob, `pixelgnome-${timestamp}.pdf`);
+
+    // History is image-export-centric — record the image pages only (PDFs get
+    // no history entry, per the C4 decisions).
+    const idsToRemove = [];
+    for (const item of imageItemsExported) {
+      markPreviewCardExported(item.id);
+      const filename = buildOutputFilename(item.file.name, pattern, settings.format, {
+        width: item.result.outputWidth,
+        height: item.result.outputHeight,
+        preset: settings.presetId,
+      });
+      addToHistory(item, filename, settings);
+      idsToRemove.push(item.id);
+    }
+
+    trackPdfMerged({ count: entries.length });
+
+    showToast(t('bulk.combineDone', { count: entries.length }), 'success');
+    announce(t('bulk.combineDone', { count: entries.length }));
+    flashExportConfirm();
+
+    // Mirror handleExportPdf: exported image cards are removed after the
+    // checkmark animation. PDF cards stay (they were merged, not consumed —
+    // and PDFs carry no export lifecycle), only dropped from the selection.
+    setTimeout(() => {
+      for (const id of idsToRemove) {
+        imageQueue.delete(id);
+        removePreviewCard(id);
+      }
+      removeIdsFromSelection(idsToRemove);
+      removeIdsFromSelection(selected.filter((e) => e.kind === 'pdf').map((e) => e.id));
+      updateBatchControls();
+      if (imageQueue.size === 0 && pdfQueue.size === 0) {
+        dropZoneEl.classList.remove('has-images');
+      }
+    }, 1200);
+  } catch (err) {
+    hideProgress();
+    showToast(t('bulk.combineFailed', { message: err.message }), 'error');
+    console.error('PixelGnome: Combine to PDF failed:', err);
+  }
 }
 
 /**

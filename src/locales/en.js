@@ -320,10 +320,25 @@ export default {
     zip: 'ZIP',
     zipTip: 'Bundle selected images into a single ZIP archive',
     zipAria: 'Download selected images as ZIP',
+    combine: 'Combine to PDF',
+    combineTip: 'Combine the selected images and PDFs into a single PDF (in order)',
+    combineAria: 'Combine selected files into one PDF',
     delete: 'Delete',
-    deleteTip: 'Remove selected images from the queue (Delete / Backspace)',
-    deleteAria: 'Delete selected images',
+    deleteTip: 'Remove selected files from the queue (Delete / Backspace)',
+    deleteAria: 'Delete selected files',
     deselect: 'Deselect',
+    // Selection count labels. The {one, other} entries pluralize on `count`; the
+    // mixed/Part forms are composed in JS (selectionCountLabel) so each side gets
+    // the right plural before being slotted into countMixed.
+    countImages: { one: '{count} image selected', other: '{count} images selected' },
+    countPdfs: { one: '{count} PDF selected', other: '{count} PDFs selected' },
+    countMixed: '{images}, {pdfs} selected',
+    countImagesPart: { one: '{count} image', other: '{count} images' },
+    countPdfsPart: { one: '{count} PDF', other: '{count} PDFs' },
+    // Combine-to-PDF lifecycle toasts.
+    combineBuilding: 'Building PDF from {count} files…',
+    combineDone: 'Combined {count} files into a PDF',
+    combineFailed: 'Could not build the PDF: {message}',
   },
 
   footer: {
@@ -394,6 +409,7 @@ export default {
     noToDownloadErr: 'No {subject} images to download — {errored} failed to process.',
     savedOfTotal: 'Saved {saved} of {total} — {errored} failed.',
     exported: { one: 'Exported {count} image.', other: 'Exported {count} images.' },
+    exportedFiles: { one: 'Exported {count} file.', other: 'Exported {count} files.' },
     zipping: { one: 'Zipping {count} image...', other: 'Zipping {count} images...' },
     zipExported: {
       one: 'ZIP exported with {count} image.',

@@ -306,7 +306,11 @@ export function addPdfPreviewCard(id, file, onRemove, onOpen) {
   card.setAttribute('tabindex', '0');
 
   card.innerHTML = `
-    <div class="preview-card-gutter"></div>
+    <div class="preview-card-gutter">
+      <button type="button" class="preview-card-select" data-action="select" aria-pressed="false" aria-label="${escapeAttr(t('card.selectAria', { name: file.name }))}" title="${t('card.selectTitle')}">
+        <svg class="select-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+      </button>
+    </div>
     <div class="preview-card-thumb clickable" data-action="open-pdf" title="${escapeAttr(t('card.editPagesTitle'))}">
       <div class="pdf-thumb-placeholder" id="pdfthumb-${id}" aria-hidden="true">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>

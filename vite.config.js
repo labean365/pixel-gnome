@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite';
+import { injectVersion } from './scripts/vite-inject-version.js';
 
 export default defineConfig({
   root: 'src',
+  plugins: [injectVersion()],
   // Static files (icons, og-image, robots.txt, sitemap.xml) served from the
   // repo-root public/ folder and copied to the dist/ root at build time.
   publicDir: '../public',

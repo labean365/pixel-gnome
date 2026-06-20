@@ -328,10 +328,24 @@ export default {
     zip: 'ZIP',
     zipTip: 'Raccogli le immagini selezionate in un unico archivio ZIP',
     zipAria: 'Scarica le immagini selezionate come ZIP',
+    combine: 'Combina in PDF',
+    combineTip: 'Combina le immagini e i PDF selezionati in un unico PDF (in ordine)',
+    combineAria: 'Combina i file selezionati in un unico PDF',
     delete: 'Elimina',
-    deleteTip: 'Rimuovi le immagini selezionate dalla coda (Canc / Backspace)',
-    deleteAria: 'Elimina le immagini selezionate',
+    deleteTip: 'Rimuovi i file selezionati dalla coda (Canc / Backspace)',
+    deleteAria: 'Elimina i file selezionati',
     deselect: 'Deseleziona',
+    // Etichette di conteggio della selezione. Le voci {one, other} usano `count`;
+    // le forme mista/Part sono composte in JS (selectionCountLabel).
+    countImages: { one: '{count} immagine selezionata', other: '{count} immagini selezionate' },
+    countPdfs: { one: '{count} PDF selezionato', other: '{count} PDF selezionati' },
+    countMixed: '{images}, {pdfs} selezionati',
+    countImagesPart: { one: '{count} immagine', other: '{count} immagini' },
+    countPdfsPart: { one: '{count} PDF', other: '{count} PDF' },
+    // Toast del ciclo di vita di Combina in PDF.
+    combineBuilding: 'Creazione del PDF da {count} file…',
+    combineDone: 'Combinati {count} file in un PDF',
+    combineFailed: 'Impossibile creare il PDF: {message}',
   },
 
   footer: {
@@ -408,6 +422,7 @@ export default {
       'Nessuna immagine {subject} da scaricare — {errored} non elaborate correttamente.',
     savedOfTotal: 'Salvate {saved} di {total} — {errored} non riuscite.',
     exported: { one: 'Esportata {count} immagine.', other: 'Esportate {count} immagini.' },
+    exportedFiles: { one: 'Esportato {count} file.', other: 'Esportati {count} file.' },
     zipping: {
       one: 'Compressione di {count} immagine...',
       other: 'Compressione di {count} immagini...',

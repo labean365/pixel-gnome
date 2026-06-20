@@ -274,6 +274,70 @@ export async function imagesToPdfBlob(blobs) {
   return new Blob([bytes], { type: 'application/pdf' });
 }
 
+/**
+ * Merge several PDF Blobs into one, top-to-bottom in the given order. Reads each
+ * blob to bytes and drives the existing `pdf-merge` worker op (same engine the
+ * Merge modal uses), then wraps the result bytes as an application/pdf Blob.
+ * @param {Blob[]} pdfBlobs  PDF blobs, in output order.
+ * @returns {Promise<Blob>} an application/pdf blob.
+ */
+export async function mergePdfBlobs(pdfBlobs) {
+  if (!isPdfSupported()) throw new Error(t('pdf.errorUnsupported'));
+  if (!Array.isArray(pdfBlobs) || pdfBlobs.length === 0) throw new Error(t('pdf.img.errNone'));
+  const docs = [];
+  for (const blob of pdfBlobs) docs.push(new Uint8Array(await blob.arrayBuffer()));
+  const res = await call('pdf-merge', { docs });
+  const bytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes);
+  return new Blob([bytes], { type: 'application/pdf' });
+}
+
+/**
+ * Combine a mixed, ordered list of image + PDF entries into one PDF (C4
+ * "Combine to PDF"). Order is preserved: adjacent image runs are collapsed into
+ * a single `imagesToPdfBlob` call (each image → one page), PDF entries pass
+ * through as-is, then every resulting PDF is merged in order via `pdf-merge`.
+ *
+ * Short-circuits avoid needless re-encodes: an all-image list goes straight to
+ * one `imagesToPdfBlob`; a single PDF entry is returned untouched; a single
+ * image becomes a one-page PDF.
+ * @param {{ type: 'image' | 'pdf', blob: Blob }[]} entries  Entries in page order.
+ * @returns {Promise<Blob>} an application/pdf blob.
+ */
+export async function combineMixedToPdf(entries) {
+  if (!isPdfSupported()) throw new Error(t('pdf.errorUnsupported'));
+  if (!Array.isArray(entries) || entries.length === 0) throw new Error(t('pdf.img.errNone'));
+
+  // Short-circuits.
+  if (entries.every((e) => e.type === 'image')) {
+    return imagesToPdfBlob(entries.map((e) => e.blob));
+  }
+  if (entries.length === 1) {
+    const only = entries[0];
+    return only.type === 'pdf' ? only.blob : imagesToPdfBlob([only.blob]);
+  }
+
+  // Walk in order, collapsing adjacent image runs into one PDF each.
+  const pdfBlobs = [];
+  let imageRun = [];
+  const flushImages = async () => {
+    if (imageRun.length === 0) return;
+    pdfBlobs.push(await imagesToPdfBlob(imageRun));
+    imageRun = [];
+  };
+  for (const entry of entries) {
+    if (entry.type === 'pdf') {
+      await flushImages();
+      pdfBlobs.push(entry.blob);
+    } else {
+      imageRun.push(entry.blob);
+    }
+  }
+  await flushImages();
+
+  if (pdfBlobs.length === 1) return pdfBlobs[0];
+  return mergePdfBlobs(pdfBlobs);
+}
+
 /** JPEG/PNG → raw bytes (pass-through); any other format → JPEG bytes via canvas. */
 async function normalizeForPdf(blob) {
   const type = blob.type || '';

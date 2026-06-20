@@ -258,35 +258,49 @@ export function isWorkerAvailable() {
  * @param {(pct: number) => void} [onProgress] - Optional 0-100 progress callback
  *   driven by JSZip's internal `onUpdate`. Fires during zip build only (not
  *   during file staging above, which is synchronous).
+ * @param {{ name: string, blob: Blob }[]} [extraFiles] - Optional pre-named
+ *   files added to the same ZIP (C4 mixed export — PDFs ride this path so the
+ *   selection lands in one archive). They share the same collision-dedupe as
+ *   the image entries. Defaults to none, so existing callers are unchanged.
  * @returns {Promise<void>}
  */
-export async function exportAsZip(items, pattern, format, onProgress) {
+export async function exportAsZip(items, pattern, format, onProgress, extraFiles) {
   const zip = new JSZip();
   const usedNames = new Map(); // track name collisions
+
+  // Insert a counter before the extension on collision: photo.jpg → photo-2.jpg.
+  const dedupe = (filename) => {
+    if (usedNames.has(filename)) {
+      const count = usedNames.get(filename) + 1;
+      usedNames.set(filename, count);
+      const lastDot = filename.lastIndexOf('.');
+      const base = lastDot > 0 ? filename.substring(0, lastDot) : filename;
+      const ext = lastDot > 0 ? filename.substring(lastDot) : '';
+      return `${base}-${count}${ext}`;
+    }
+    usedNames.set(filename, 1);
+    return filename;
+  };
 
   for (const item of items) {
     if (!item.result) continue;
 
-    let filename = buildOutputFilename(item.file.name, pattern, format, {
-      width: item.result.outputWidth,
-      height: item.result.outputHeight,
-    });
-
-    // Handle filename collisions
-    if (usedNames.has(filename)) {
-      const count = usedNames.get(filename) + 1;
-      usedNames.set(filename, count);
-
-      // Insert counter before extension: photo-web.jpg → photo-web-2.jpg
-      const lastDot = filename.lastIndexOf('.');
-      const base = filename.substring(0, lastDot);
-      const ext = filename.substring(lastDot);
-      filename = `${base}-${count}${ext}`;
-    } else {
-      usedNames.set(filename, 1);
-    }
+    const filename = dedupe(
+      buildOutputFilename(item.file.name, pattern, format, {
+        width: item.result.outputWidth,
+        height: item.result.outputHeight,
+      })
+    );
 
     zip.file(filename, item.result.blob);
+  }
+
+  // Extra (already-named) files — e.g. PDFs in a mixed C4 selection.
+  if (Array.isArray(extraFiles)) {
+    for (const extra of extraFiles) {
+      if (!extra || !extra.blob) continue;
+      zip.file(dedupe(extra.name), extra.blob);
+    }
   }
 
   const zipBlob = await zip.generateAsync(
