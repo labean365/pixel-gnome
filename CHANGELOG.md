@@ -8,6 +8,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.25.0] — 2026-06-20
+
+### Unified file utility — PDFs flow through the same intake → drill-in → edit experience as images
+
+This release closes the seam between the image and PDF pipelines. Until now a dropped PDF jumped into a separate full-screen modal with its own tabs — a different layout and mental model that made the toolkit feel bolted on. PDFs now come in through the **same front door** as images, appear as cards in the **same workspace**, and open into a drill-in editor that mirrors the image editor. This is the first slice of the "local-first file utility for images **and** PDFs" direction: the center of gravity is the task, not the file type.
+
+#### Unified intake (C1)
+
+- **A dropped PDF is now a card in the shared workspace**, alongside images, instead of routing straight to a separate tab. The card shows a first-page thumbnail, a `PDF · {n}p` badge, and filename + page-count + size — a visual sibling of the image cards, with the same select / remove / clear behaviour. One drop zone, mixed file types welcome.
+- The first-page thumbnail and page count are read headlessly via the same lazy MuPDF worker the editor uses (no UI, no modal state touched); the thumbnail object URL is tracked and revoked per-card on remove and globally on Clear All.
+
+#### PDF drill-in editor (C2)
+
+- **Click a PDF card to drill into a full editing surface** whose primary content is a **page-thumbnail grid** (rendered lazily on scroll). Pages support multi-select, **drag-to-reorder** (plus `Alt`+`←`/`→` keyboard reorder), **rotate ±90°**, **delete**, **extract**, and **remove** — the direct analogue of the image editor's per-item transforms.
+- **Edits batch and stay non-destructive until you commit them.** A bottom edit bar shows a preflight summary (`7 of 8 pages · 2 rotated · original unchanged`) with **Apply** (bake the edits back onto the card), **Export** (download the edited PDF without changing the card), and **Reset**.
+- **Compress, Split, and To-Images are now collapsible panels inside the drill-in** rather than separate top-level tabs — Compress (presets + advanced quality/recompress/strip-metadata/subset-fonts/garbage-collect), Split (every page or custom ranges → ZIP), and To-Images (PNG/JPEG at 96/150/300 DPI → ZIP, or send the pages into the image queue).
+
+#### Consistency pass (C5)
+
+- **The PDF drill-in is now a full-screen editing surface** that mirrors the image editor (`.crop-modal`) — app background, surface-colored header, content centered in a comfortable reading column — instead of a small card floating on a dark backdrop, so the two editors read as one app.
+- **Aligned details with the image side:** the filename renders in the same monospace face, preset chips pick up the image editor's accent-tint hover treatment (was border-only), and the page grid grows to use the full-screen height.
+- **Copy aligned:** the drill-in's primary action is now **Apply** (matching the image editor) and its dialog label is **Edit PDF** (mirroring **Edit Image**). EN and IT updated together.
+
+#### Notes
+
+- The standalone PDF modal/tablist is retired in favour of the card + drill-in flow. Recipes / task-oriented entry (C3) and the mixed-selection export bar (C4) are the next steps in this arc.
+
 ## [v0.24.0] — 2026-06-19
 
 ### PDF toolkit — compress, organize, merge, and convert PDFs, all client-side
