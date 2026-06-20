@@ -1,0 +1,35 @@
+v0.27.0 — Mixed-selection export (Tier C, C4)
+
+The multi-select workspace now spans both images and PDFs, and the bulk
+actions understand mixed selections. Completes the Tier C unified
+file-utility arc.
+
+Added
+- PDF cards are selectable: per-card toggle, Select all / Deselect all,
+  click / Shift-range / Cmd-click, bulk toolbar. Count reads naturally
+  for mixed sets ("3 images, 1 PDF").
+- Selection-aware export actions:
+  - Download -> each selected file in place (images as processed output,
+    PDFs as-is).
+  - Combine to PDF -> append-merge the selection into one PDF in list
+    order (images become pages, PDF pages inserted in place). Shown only
+    where the PDF feature is available.
+  - ZIP -> everything together in a single archive.
+- Mixed delete removes images (with Undo) and PDFs in one action.
+
+Changed
+- Rotate/flip bulk buttons disable when a PDF is selected (image-only);
+  delete + export stay available.
+- All-image selections unchanged (same code paths as before).
+
+Engineering
+- New combineMixedToPdf / mergePdfBlobs helpers (reuse the MuPDF worker
+  pdf-merge op + imagesToPdfBlob); exportAsZip gained an optional
+  extraFiles param for the single ZIP path. Analytics reuse export /
+  pdf_merged.
+- Footer version now injected from package.json at build (Vite plugin),
+  replacing the hand-edited string that had drifted (footer showed
+  v0.24.0 through v0.25.0/v0.26.0). It can no longer go stale.
+
+Verified: npm run verify green (eslint 0 errors, prettier clean,
+build:all, check:pdf on dist + dist-single).

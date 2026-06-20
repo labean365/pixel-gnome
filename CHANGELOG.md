@@ -8,6 +8,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.27.0] — 2026-06-20
+
+### Mixed-selection export — work with images and PDFs together (Tier C, C4)
+
+The multi-select workspace now spans **both** images and PDFs, and the bulk actions understand mixed selections. This completes the Tier C unified file-utility arc: drop anything, select across types, and export them together.
+
+#### Added
+
+- **PDF cards are selectable.** The per-card select toggle, Select all / Deselect all, click / Shift-range / Cmd-click, and the bulk toolbar now include PDF cards alongside images. The count reads naturally for mixed sets (e.g. "3 images, 1 PDF").
+- **Selection-aware export actions** in the bulk toolbar:
+  - **Download** — each selected file in place (images as their processed output, PDFs as-is).
+  - **Combine to PDF** — append-merge the whole selection into one PDF in list order: images become pages, selected PDFs' pages are inserted in place. (Shown only where the PDF feature is available.)
+  - **ZIP** — everything together in a single archive (images + PDFs).
+- **Mixed delete** removes images (with the usual Undo) and PDFs in one action.
+
+#### Changed
+
+- Rotate / flip bulk buttons disable automatically when the selection contains a PDF (they apply to images only); delete and the export actions stay available.
+- All-image selections are unchanged — they take the exact same paths as before.
+
+#### Engineering
+
+- New `combineMixedToPdf` / `mergePdfBlobs` helpers (reusing the existing MuPDF worker `pdf-merge` op and `imagesToPdfBlob`); `exportAsZip` gained an optional `extraFiles` parameter so PDFs ride the single ZIP path. Content-free analytics reuse the existing `export` / `pdf_merged` events.
+- **Footer version is now injected from `package.json` at build time** (a small Vite plugin), replacing the hand-edited string that had silently drifted (the footer showed v0.24.0 through the v0.25.0 and v0.26.0 releases). It can no longer go stale.
+
 ## [v0.26.0] — 2026-06-20
 
 ### Recipes — a task-oriented entry to Step 2 (Tier C, C3)
