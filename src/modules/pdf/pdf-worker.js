@@ -14,6 +14,7 @@
  *   IN:  { type: 'pdf-optimize', id, bytes, options }
  *   IN:  { type: 'pdf-preview',  id, bytes, pageIndex, scale }
  *   IN:  { type: 'pdf-extract',  id, bytes, pages }        // P2: pages to KEEP
+ *   IN:  { type: 'pdf-rotate',   id, bytes, rotations }    // C2: [{index,degrees}] relative
  *   IN:  { type: 'pdf-split',    id, bytes, ranges }       // P2: page-index groups
  *   IN:  { type: 'pdf-merge',    id, docs }                // P2: PDF byte arrays, in order
  *   IN:  { type: 'pdf-from-images', id, images }           // P3: JPEG/PNG byte arrays → PDF
@@ -40,6 +41,7 @@ import {
   optimize,
   renderPagePreview,
   extractPages,
+  rotatePages,
   split,
   merge,
   imagesToPdf,
@@ -100,6 +102,15 @@ self.onmessage = async function (e) {
       case 'pdf-extract': {
         // Extract (or, by passing the pages to KEEP, remove) into one new PDF.
         const out = toTransferable(await extractPages(msg.bytes, msg.pages));
+        self.postMessage({ type: 'result', id, bytes: out, outputSize: out.byteLength }, [
+          out.buffer,
+        ]);
+        break;
+      }
+
+      case 'pdf-rotate': {
+        // Rotate listed pages (relative degrees) in place; page-dict change only.
+        const out = toTransferable(await rotatePages(msg.bytes, msg.rotations));
         self.postMessage({ type: 'result', id, bytes: out, outputSize: out.byteLength }, [
           out.buffer,
         ]);

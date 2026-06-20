@@ -163,10 +163,20 @@ export async function optimize(bytes, options = {}) {
       const ind = pdf.newIndirect(i);
       try {
         const image = pdf.loadImage(ind);
-        let pix = image.toPixmap();
-        // JPEG needs an opaque RGB pixmap.
+        const pix = image.toPixmap();
+        // Only recompress straightforward OPAQUE RGB images. Skip anything that
+        // carries transparency or isn't 3-component RGB:
+        //   - alpha channel → JPEG can't hold it (transparent pixels go black);
+        //   - non-RGB (grayscale/CMYK/indexed) → this also covers a soft-mask
+        //     (/SMask) image, which is a DeviceGray mask; converting it to RGB
+        //     JPEG corrupts the mask.
+        // Crucially we also DON'T delete /SMask anymore: a base RGB image often
+        // carries a soft mask (e.g. a transparent PNG logo). Recompressing the
+        // base while preserving its /SMask keeps the transparency intact.
         if (pix.getAlpha() || pix.getNumberOfComponents() !== 3) {
-          pix = pix.convertToColorSpace(mupdf.ColorSpace.DeviceRGB, false);
+          done++;
+          if (onProgress) onProgress(done, imageObjs.length);
+          continue;
         }
         const jpg = pix.asJPEG(jpegQuality, false);
         // Rewrite the image XObject in place (same object number ⇒ all
@@ -177,7 +187,6 @@ export async function optimize(bytes, options = {}) {
         ind.put('BitsPerComponent', pdf.newInteger(8));
         ind.put('ColorSpace', pdf.newName('DeviceRGB'));
         ind.delete('DecodeParms');
-        ind.delete('SMask');
         ind.writeRawStream(jpg);
       } catch {
         // Leave any image we can't recompress untouched.
@@ -296,6 +305,55 @@ export async function extractPages(bytes, pages) {
   const pdf = openPdf(mupdf, bytes);
   const valid = assertPages(pages, pdf.countPages(), 'extractPages');
   return subsetDoc(mupdf, pdf, valid);
+}
+
+/**
+ * Rotate pages by a relative angle (C2). Each entry ADDS its `degrees` (a
+ * multiple of 90) to that page's current /Rotate, normalized to [0, 360); pages
+ * not listed are untouched. Rotation is a page-dict change only — text, vectors,
+ * and images are preserved (nothing is rasterized).
+ *
+ * Note: reads the leaf page dict's /Rotate (default 0). A rotation inherited
+ * from an ancestor Pages node isn't added to — uncommon, and setting the leaf
+ * value still yields the correct absolute orientation for the listed pages.
+ * @param {Uint8Array} bytes
+ * @param {Array<{ index: number, degrees: number }>} rotations  0-based indices.
+ * @returns {Promise<Uint8Array>}
+ */
+export async function rotatePages(bytes, rotations) {
+  assertBytes(bytes, 'rotatePages');
+  if (!Array.isArray(rotations) || rotations.length === 0) {
+    throw new TypeError(
+      'pdf-engine.rotatePages: expected a non-empty array of { index, degrees }.'
+    );
+  }
+  const mupdf = await loadEngine();
+  const pdf = openPdf(mupdf, bytes);
+  const pageCount = pdf.countPages();
+  for (const entry of rotations) {
+    const { index, degrees } = entry || {};
+    if (!Number.isInteger(index) || index < 0 || index >= pageCount) {
+      throw new RangeError(
+        `pdf-engine.rotatePages: page index ${index} is out of range (0–${pageCount - 1}).`
+      );
+    }
+    if (!Number.isInteger(degrees) || degrees % 90 !== 0) {
+      throw new RangeError('pdf-engine.rotatePages: degrees must be an integer multiple of 90.');
+    }
+    if (degrees % 360 === 0) continue; // net no-op — leave the page untouched
+    const pageObj = pdf.loadPage(index).getObject();
+    let cur = 0;
+    try {
+      const r = pageObj.get('Rotate');
+      if (r && !r.isNull()) cur = r.asNumber();
+    } catch {
+      /* no readable /Rotate — treat as 0 */
+    }
+    const next = (((cur + degrees) % 360) + 360) % 360;
+    pageObj.put('Rotate', pdf.newInteger(next));
+  }
+  // garbage=4 renumbers + merges duplicate objects/streams; deflate compresses.
+  return pdf.saveToBuffer('garbage=4,deflate=yes').asUint8Array();
 }
 
 /**

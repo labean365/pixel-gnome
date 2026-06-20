@@ -283,6 +283,106 @@ export async function addPreviewCard(id, file, onRemove, onDownload, editCallbac
 }
 
 /**
+ * Add a PDF card to the shared preview list (C1 unified intake). A visual sibling
+ * of the image card, minus the image-processing chrome: a first-page thumbnail
+ * (filled in async), a "Np" page badge, a page/size meta line, and a single
+ * "Edit pages" action. Page count + thumbnail arrive via updatePdfCardMeta once
+ * the worker has read the file. PDFs live in their own queue (main.js), so the
+ * image processing/export paths never see them.
+ * @param {string} id
+ * @param {File} file
+ * @param {function(string): void} onRemove
+ * @param {function(string): void} onOpen - opens the PDF (interim: the modal)
+ */
+export function addPdfPreviewCard(id, file, onRemove, onOpen) {
+  showPreviewArea();
+
+  const card = document.createElement('div');
+  card.className = 'preview-card pdf-card';
+  card.id = `card-${id}`;
+  card.dataset.kind = 'pdf';
+  card.setAttribute('role', 'listitem');
+  card.setAttribute('aria-label', t('card.pdfAria', { name: file.name }));
+  card.setAttribute('tabindex', '0');
+
+  card.innerHTML = `
+    <div class="preview-card-gutter"></div>
+    <div class="preview-card-thumb clickable" data-action="open-pdf" title="${escapeAttr(t('card.editPagesTitle'))}">
+      <div class="pdf-thumb-placeholder" id="pdfthumb-${id}" aria-hidden="true">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+    </div>
+    <div class="preview-card-info">
+      <div class="preview-card-header">
+        <span class="preview-card-name" title="${escapeAttr(file.name)}">${escapeHtml(file.name)}</span>
+        <span class="preview-card-type" data-type="PDF">PDF</span>
+        <span class="preview-card-badge pdf-badge" id="pdfbadge-${id}" hidden></span>
+      </div>
+      <div class="preview-card-stats">
+        <div class="pdf-meta-line" id="pdfmeta-${id}">${escapeHtml(t('card.pdfPagesLoading'))} &middot; ${formatBytes(file.size)}</div>
+      </div>
+      <div class="edit-toolbar">
+        <button class="btn-edit" data-action="open-pdf" data-tooltip="${t('card.editPagesTitle')}" title="${t('card.editPagesTitle')}" aria-label="${t('card.editPagesTitle')}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          ${t('card.editPages')}
+        </button>
+      </div>
+    </div>
+    <div class="preview-card-actions">
+      <button class="btn btn-icon btn-danger" data-action="remove" data-tooltip="${t('card.removeTip')}" title="${t('card.removeTitle')}" aria-label="${escapeAttr(t('card.removeAria', { name: file.name }))}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  `;
+
+  card.querySelector('[data-action="remove"]').addEventListener('click', () => onRemove(id));
+  card
+    .querySelectorAll('[data-action="open-pdf"]')
+    .forEach((el) => el.addEventListener('click', () => onOpen(id)));
+
+  previewList().appendChild(card);
+}
+
+/**
+ * Fill in a PDF card's page count, page/size line, and first-page thumbnail once
+ * the worker has read the file (see addPdfPreviewCard / getPdfCardMeta). Safe to
+ * call after the card was removed (no-ops if the node is gone).
+ * @param {string} id
+ * @param {{ pageCount: number, fileSize?: number, thumbnailUrl: string|null }} meta
+ */
+export function updatePdfCardMeta(id, meta) {
+  const card = document.getElementById(`card-${id}`);
+  if (!card || !meta) return;
+  const n = meta.pageCount || 0;
+
+  const badge = document.getElementById(`pdfbadge-${id}`);
+  if (badge) {
+    badge.textContent = t('card.pdfBadge', { count: n });
+    badge.hidden = false;
+  }
+
+  const metaLine = document.getElementById(`pdfmeta-${id}`);
+  if (metaLine) {
+    metaLine.textContent = `${t('card.pdfPages', { count: n })} · ${formatBytes(meta.fileSize || 0)}`;
+  }
+
+  if (meta.thumbnailUrl) {
+    const thumb = card.querySelector('.preview-card-thumb');
+    const placeholder = document.getElementById(`pdfthumb-${id}`);
+    if (thumb) {
+      if (placeholder) placeholder.remove();
+      const img = document.createElement('img');
+      img.src = meta.thumbnailUrl;
+      img.alt = t('card.pdfThumbAlt');
+      thumb.insertBefore(img, thumb.firstChild);
+    }
+  }
+}
+
+/**
  * Toggle a card's "edited" affordance: shows/hides the per-card revert button
  * and marks the card so styling can reflect that it differs from the original.
  * Called after any reprocess, since every edit path (crop/rotate/flip/bulk)

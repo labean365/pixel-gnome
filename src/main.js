@@ -20,6 +20,8 @@ import {
 import { isHeicFile } from './modules/heic-decoder.js';
 import {
   addPreviewCard,
+  addPdfPreviewCard,
+  updatePdfCardMeta,
   updatePreviewCardResult,
   updatePreviewCardError,
   markPreviewCardExported,
@@ -59,6 +61,7 @@ import {
   isPdfSupported,
   imagesToPdfBlob,
   setImageImportHandler,
+  getPdfCardMeta,
 } from './modules/pdf/pdf-ui.js';
 import { trackImageProcessed, trackExport } from './modules/analytics.js';
 import { isGifFile, isAnimatedGif } from './modules/gif-detect.js';
@@ -80,6 +83,15 @@ initErrorReporter();
  * @type {Map<string, import('./modules/batch-manager.js').BatchItem>}
  */
 const imageQueue = new Map();
+
+/**
+ * PDF items live in their own map (C1 unified intake). They render as cards in
+ * the shared preview list but are deliberately kept out of imageQueue so the
+ * image processing / reprocess / export / bulk paths stay image-only. The C2
+ * drill-in will build on this; mixed-type selection/export is C4.
+ * @type {Map<string, { id: string, file: File, kind: 'pdf', pdfMeta: object|null }>}
+ */
+const pdfQueue = new Map();
 
 let idCounter = 0;
 
@@ -220,7 +232,8 @@ if (emptyChipPdf && isPdfSupported()) emptyChipPdf.hidden = false;
 
 for (const chip of document.querySelectorAll('.content-empty-chip')) {
   chip.addEventListener('click', () => {
-    // PDF chip: open the file picker (a chosen PDF routes to the PDF modal).
+    // PDF chip: open the file picker (a chosen PDF becomes a card via the C1
+    // unified-intake path in handleNewFiles).
     if (chip.dataset.action === 'pdf') {
       fileInputEl.click();
       return;
@@ -949,24 +962,86 @@ function isPdfFile(file) {
 }
 
 /**
+ * C1 unified intake — add a dropped PDF as a card in the shared preview list.
+ * The page count + first-page thumbnail fill in asynchronously via the lazy
+ * pdf-worker (mirrors the HEIC/GIF async pattern). Clicking the card opens the
+ * existing PDF modal as the interim bridge until the C2 drill-in editor.
+ * @param {File} file
+ */
+function addPdfCard(file) {
+  const id = generateId();
+  const item = { id, file, kind: 'pdf', pdfMeta: null };
+  pdfQueue.set(id, item);
+  dropZoneEl.classList.add('has-images');
+
+  addPdfPreviewCard(
+    id,
+    file,
+    (cardId) => removePdfCard(cardId),
+    () => {
+      // Open the drill-in on the card's CURRENT file (it may have been edited
+      // already), and persist applied page edits back to the card (C2).
+      const current = pdfQueue.get(id);
+      if (!current) return;
+      openPdfModal(current.file, {
+        onApply: (editedFile) => {
+          current.file = editedFile;
+          getPdfCardMeta(editedFile)
+            .then((meta) => {
+              current.pdfMeta = meta;
+              updatePdfCardMeta(id, meta);
+            })
+            .catch(() => {
+              /* keep the existing card meta if re-reading fails */
+            });
+        },
+      });
+    }
+  );
+  announce(t('announce.pdfAdded', { name: file.name }));
+
+  getPdfCardMeta(file)
+    .then((meta) => {
+      item.pdfMeta = meta;
+      updatePdfCardMeta(id, meta);
+    })
+    .catch(() => {
+      // Engine/read failure — leave the placeholder card; clicking it still
+      // opens the modal, which surfaces its own error if the PDF is unreadable.
+    });
+}
+
+/**
+ * Remove a PDF card and its queue entry. Restores the empty-state hero only when
+ * both queues are empty (removePreviewCard already brings the hero back by DOM
+ * count; this also drops the drop-zone's has-images class).
+ * @param {string} id
+ */
+function removePdfCard(id) {
+  pdfQueue.delete(id);
+  removePreviewCard(id);
+  if (imageQueue.size === 0 && pdfQueue.size === 0) {
+    dropZoneEl.classList.remove('has-images');
+  }
+}
+
+/**
  * Handle new files from drop zone or file picker
  * @param {File[]} files
  */
 async function handleNewFiles(files) {
-  // PDFs take a separate path — the single-PDF optimizer modal, not the image
-  // queue (P1 handles one PDF at a time; batch is a later iteration).
+  // C1 unified intake — PDFs render as cards in the shared workspace (their own
+  // queue), not the separate modal-on-drop. Clicking a PDF card opens the modal
+  // (interim bridge) until the C2 in-place drill-in lands.
   const pdfs = files.filter(isPdfFile);
   if (pdfs.length > 0) {
     if (!isPdfSupported()) {
       showToast(t('pdf.errorUnsupported'), 'error', 6000);
-    } else if (pdfs.length > 1) {
-      // Multiple PDFs → open the modal straight into Merge with all preloaded.
-      openPdfModal(pdfs[0], { mergeFiles: pdfs });
     } else {
-      openPdfModal(pdfs[0]);
+      for (const file of pdfs) addPdfCard(file);
     }
     const images = files.filter((f) => !isPdfFile(f));
-    if (images.length === 0) return; // nothing else to do
+    if (images.length === 0) return; // PDFs are handled as cards; nothing else to do
     files = images; // fall through to process the remaining images
   }
 
@@ -1712,6 +1787,7 @@ function handleClearAll() {
   }
 
   imageQueue.clear();
+  pdfQueue.clear();
   clearPreviews();
   hideProgress();
   updateBatchControls();
