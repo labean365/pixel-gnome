@@ -1,0 +1,24 @@
+v0.26.0 — Recipes: task-oriented entry to Step 2 (Tier C, C3)
+
+Step 2 now leads with "What do you want to do?" — a row of one-tap
+recipes above the size presets, so the front door is the task, not the
+dimensions. Image-first slice (recipes drive the image pipeline now;
+PDF cross-type resolution is C4).
+
+Added
+- Recipes row in Step 2, each applying sensible defaults:
+  - Compress / optimize -> keep original dimensions, just shrink
+    (applies the "Original size - convert & compress" preset).
+  - Make email-safe -> max long edge 1600px, JPEG, quality 75, strip
+    metadata.
+  - Convert format -> no resize; opens Customize + focuses the format
+    picker.
+- Chosen recipe stays highlighted; clears when a preset is picked or any
+  setting is changed by hand. Size presets + Customize unchanged below.
+- Content-free recipe_selected analytics event; Italian translations.
+
+Next: C4 mixed-selection export bar (Download / Combine-to-PDF / ZIP
+across images and PDFs), where recipes also resolve for PDFs.
+
+Verified: npm run verify green (eslint 0 errors, prettier clean,
+build:all, check:pdf on dist + dist-single).

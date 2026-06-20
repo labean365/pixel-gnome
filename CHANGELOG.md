@@ -8,6 +8,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.26.0] — 2026-06-20
+
+### Recipes — a task-oriented entry to Step 2 (Tier C, C3)
+
+Step 2 now leads with **"What do you want to do?"** — a row of one-tap recipes above the size presets, so the front door is the task, not the dimensions. This is the C3 slice of the unified file-utility direction; it's **image-first** (recipes drive the image pipeline now, and PDFs pick up the matching defaults when you act on them — the cross-type export work is C4).
+
+#### Added
+
+- **Recipes row in Step 2** with three intents, each applying sensible defaults and revealing the relevant controls:
+  - **Compress / optimize** — keep the original dimensions, just shrink (applies the "Original size — convert & compress" preset).
+  - **Make email-safe** — resize to a small, widely-compatible size (max long edge 1600 px, JPEG, quality 75, metadata stripped).
+  - **Convert format** — change the format without resizing; opens Customize and focuses the format picker so you can choose the target.
+- The chosen recipe stays highlighted and clears automatically when you pick a preset or change any setting by hand (the settings no longer match the intent). The familiar size presets and Customize panel remain unchanged beneath it.
+- Content-free `recipe_selected` analytics event (records only which recipe was chosen) and Italian translations for all recipe strings.
+
+#### Notes
+
+- Next in this arc: **C4 mixed-selection export bar** (Download / Combine-to-PDF / ZIP across images and PDFs together), where recipes will also resolve for PDFs.
+
 ## [v0.25.0] — 2026-06-20
 
 ### Unified file utility — PDFs flow through the same intake → drill-in → edit experience as images
