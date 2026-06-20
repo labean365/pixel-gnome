@@ -69,6 +69,16 @@ export function trackPdfRasterized({ format, dpi }) {
   push({ event: 'pdf_rasterized', image_format: String(format || ''), dpi: Number(dpi) || 0 });
 }
 
+/**
+ * Fire when the user picks a Step-2 recipe (task-oriented entry). Content-free:
+ * only which recipe was chosen (compress / email-safe / convert) — never any
+ * file data. No-ops without window.dataLayer (e.g. the portable single-file build).
+ * @param {{ recipe: string }} info
+ */
+export function trackRecipeSelected({ recipe }) {
+  push({ event: 'recipe_selected', recipe: String(recipe || '') });
+}
+
 /** Bucket a file count so analytics never carries a precise per-merge value. */
 function bucketCount(n) {
   if (typeof n !== 'number' || n <= 2) return '2';

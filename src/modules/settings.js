@@ -18,6 +18,31 @@ import {
 import { showToast } from './toast.js';
 import { t } from './i18n.js';
 import { trackUrl, revokeUrl } from './resource-tracker.js';
+import { trackRecipeSelected } from './analytics.js';
+
+/**
+ * Recipes (C3): task-oriented entry that maps an intent to sensible Step-2
+ * settings for the image pipeline. Image-first — a recipe sets the image
+ * settings; PDF cross-type resolution is handled at export (C4) / in the
+ * drill-in. `preset` applies a built-in preset by id; `settings` applies a
+ * field patch (presetId becomes 'custom').
+ */
+const RECIPES = {
+  compress: { preset: 'original' },
+  'email-safe': {
+    settings: {
+      mode: 'max-long-edge',
+      width: 1600,
+      height: null,
+      format: 'jpeg',
+      quality: 0.75,
+      stripMetadata: true,
+      neverUpscale: true,
+      pattern: '{name}-email',
+    },
+  },
+  convert: { settings: { mode: 'original', width: null, height: null }, focusFormat: true },
+};
 
 // --- Settings persistence ---
 const SETTINGS_STORAGE_KEY = 'pixeldrop-settings';
@@ -54,6 +79,7 @@ export function initSettings(onChangeCallback) {
   // Grab all DOM elements
   els = {
     presetSelect: document.getElementById('presetSelect'),
+    recipeButtons: document.querySelectorAll('[data-recipe]'),
     resizeModes: document.querySelectorAll('input[name="resizeMode"]'),
     targetWidth: document.getElementById('targetWidth'),
     targetHeight: document.getElementById('targetHeight'),
@@ -134,6 +160,11 @@ export function initSettings(onChangeCallback) {
       }
       emitChange();
     }
+  });
+
+  // Recipes (C3): task-oriented chips above the preset selector.
+  els.recipeButtons.forEach((btn) => {
+    btn.addEventListener('click', () => applyRecipe(btn.dataset.recipe));
   });
 
   // Customize disclosure: always start collapsed on load for a clean first view.
@@ -493,6 +524,7 @@ function applyPresetToState(preset) {
   const migrated = migratePreset({ ...preset });
   state = {
     presetId: migrated.id,
+    recipeId: null,
     mode: migrated.mode,
     width: migrated.width,
     height: migrated.height,
@@ -510,8 +542,52 @@ function applyPresetToState(preset) {
   };
 }
 
+/**
+ * Apply a recipe (C3): map a task intent to Step-2 image settings, then mark the
+ * chip active. `compress` applies the 'original' preset; the others apply a field
+ * patch on top of the current state (presetId → 'custom'). PDFs resolve later
+ * (C4 / drill-in) — this is the image-first slice.
+ * @param {'compress'|'email-safe'|'convert'} id
+ */
+function applyRecipe(id) {
+  const recipe = RECIPES[id];
+  if (!recipe) return;
+
+  if (recipe.preset) {
+    const preset = getPresetById(recipe.preset);
+    if (preset) applyPresetToState(preset);
+  } else if (recipe.settings) {
+    // Patch the current state, then relabel the preset as Custom.
+    state = { ...state, ...recipe.settings, presetId: 'custom' };
+  }
+  state.recipeId = id;
+
+  syncUIFromState();
+  updateDeleteBtnVisibility();
+  // Surface Format + Quality so the recipe's effect (esp. Convert) is visible.
+  if (els.customizePanel) els.customizePanel.open = true;
+  if (recipe.focusFormat && els.outputFormat) els.outputFormat.focus();
+
+  emitChange();
+  trackRecipeSelected({ recipe: id });
+}
+
+/** Toggle the `.active` class on recipe chips to match state.recipeId. */
+function renderRecipeActive() {
+  if (!els.recipeButtons) return;
+  els.recipeButtons.forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.recipe === state.recipeId);
+    if (btn.dataset.recipe === state.recipeId) {
+      btn.setAttribute('aria-pressed', 'true');
+    } else {
+      btn.removeAttribute('aria-pressed');
+    }
+  });
+}
+
 function syncUIFromState() {
   els.presetSelect.value = state.presetId;
+  renderRecipeActive();
 
   // Resize mode radios
   els.resizeModes.forEach((radio) => {
@@ -618,6 +694,12 @@ function rebuildPresetDropdown() {
 }
 
 function switchToCustom() {
+  // A manual edit means the settings no longer match the recipe's intent —
+  // clear the chip highlight (even when presetId is already 'custom').
+  if (state.recipeId) {
+    state.recipeId = null;
+    renderRecipeActive();
+  }
   if (state.presetId !== 'custom') {
     state.presetId = 'custom';
     els.presetSelect.value = 'custom';
@@ -713,6 +795,7 @@ function fillSettingsDefaults(saved) {
   const defaults = getDefaultPreset();
   return {
     presetId: saved.presetId ?? defaults.id,
+    recipeId: saved.recipeId ?? null,
     mode: saved.mode ?? defaults.mode,
     width: typeof saved.width === 'number' ? saved.width : defaults.width,
     height: saved.height !== undefined ? saved.height : defaults.height,

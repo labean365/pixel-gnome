@@ -397,6 +397,45 @@
               <h2 class="wf-step-title" id="step2Title" data-i18n="step2.title">Choose a size</h2>
             </div>
 
+            <!-- Recipes · task-oriented entry (applies sensible size/format defaults) -->
+            <div class="setting-group recipe-group">
+              <span class="setting-label" id="recipeLabel" data-i18n="recipe.label"
+                >What do you want to do?</span
+              >
+              <div class="recipe-row" role="group" aria-labelledby="recipeLabel">
+                <button
+                  type="button"
+                  class="recipe-chip"
+                  data-recipe="compress"
+                  title="Shrink file size, keeping the original dimensions"
+                  data-i18n="recipe.compress"
+                  data-i18n-attr="title:recipe.compressTitle"
+                >
+                  Compress / optimize
+                </button>
+                <button
+                  type="button"
+                  class="recipe-chip"
+                  data-recipe="email-safe"
+                  title="Resize and compress to a small, widely-compatible size for email"
+                  data-i18n="recipe.emailSafe"
+                  data-i18n-attr="title:recipe.emailSafeTitle"
+                >
+                  Make email-safe
+                </button>
+                <button
+                  type="button"
+                  class="recipe-chip"
+                  data-recipe="convert"
+                  title="Change the file format without resizing — pick a format below"
+                  data-i18n="recipe.convert"
+                  data-i18n-attr="title:recipe.convertTitle"
+                >
+                  Convert format
+                </button>
+              </div>
+            </div>
+
             <!-- Preset selector -->
             <div class="setting-group">
               <label for="presetSelect" class="setting-label" data-i18n="preset.label"

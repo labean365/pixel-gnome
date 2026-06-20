@@ -166,6 +166,16 @@ export default {
 
   step2: { title: 'Choose a size' },
 
+  recipe: {
+    label: 'What do you want to do?',
+    compress: 'Compress / optimize',
+    compressTitle: 'Shrink file size, keeping the original dimensions',
+    emailSafe: 'Make email-safe',
+    emailSafeTitle: 'Resize and compress to a small, widely-compatible size for email',
+    convert: 'Convert format',
+    convertTitle: 'Change the file format without resizing — pick a format below',
+  },
+
   preset: {
     label: 'Preset',
     groupWeb: 'Web',
