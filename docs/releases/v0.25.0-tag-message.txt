@@ -1,0 +1,37 @@
+v0.25.0 — unified file utility (PDF intake + drill-in + consistency)
+
+Closes the seam between the image and PDF pipelines. PDFs now enter
+through the same front door as images, appear as cards in the same
+workspace, and open into a drill-in editor that mirrors the image
+editor. First slice of the "local-first file utility for images AND
+PDFs" direction (Tier C: C1 + C2 + C5).
+
+Unified intake (C1)
+- A dropped PDF is a card in the shared workspace (first-page thumb,
+  "PDF . {n}p" badge, name + pages + size), not a separate tab. One
+  drop zone, mixed file types. Thumb/page-count read headlessly via the
+  same lazy MuPDF worker; thumbnail URL tracked + revoked per card.
+
+PDF drill-in editor (C2)
+- Click a PDF card to open a full editing surface whose primary content
+  is a lazy page-thumbnail grid: multi-select, drag-to-reorder (+ Alt+
+  Left/Right), rotate +/-90, delete, extract, remove.
+- Edits batch non-destructively: Apply (bake back onto the card),
+  Export (download edited PDF), Reset, with a preflight summary.
+- Compress / Split / To-Images are collapsible panels inside the
+  drill-in instead of separate top-level tabs.
+
+Consistency pass (C5)
+- Drill-in is now a full-screen surface mirroring the image editor
+  (.crop-modal) instead of a card on a dark backdrop, so the two read
+  as one app.
+- Monospace filename; preset chips gain the image editor's accent-tint
+  hover; page grid grows to use the full-screen height.
+- Copy: primary action "Apply changes" -> "Apply"; dialog label
+  "PDF optimization" -> "Edit PDF" (EN + IT).
+
+Next in this arc: C3 Recipes (task-oriented entry) and C4 mixed-
+selection export.
+
+Verified: npm run verify green (eslint 0 errors, prettier clean,
+build:all, check:pdf on dist + dist-single).
