@@ -1048,6 +1048,31 @@ function isPdfFile(file) {
 }
 
 /**
+ * Confirm a file actually starts with the "%PDF-" signature. Catches a file that
+ * merely *claims* to be a PDF (by .pdf extension or MIME) but isn't — so it fails
+ * fast with a clear message instead of becoming a broken card that only reveals
+ * its brokenness when clicked.
+ * @param {File} file
+ * @returns {Promise<boolean>}
+ */
+async function looksLikePdf(file) {
+  try {
+    const head = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+    // "%PDF-" = 0x25 0x50 0x44 0x46 0x2d
+    return (
+      head.length === 5 &&
+      head[0] === 0x25 &&
+      head[1] === 0x50 &&
+      head[2] === 0x44 &&
+      head[3] === 0x46 &&
+      head[4] === 0x2d
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * C1 unified intake — add a dropped PDF as a card in the shared preview list.
  * The page count + first-page thumbnail fill in asynchronously via the lazy
  * pdf-worker (mirrors the HEIC/GIF async pattern). Clicking the card opens the
@@ -1131,7 +1156,16 @@ async function handleNewFiles(files) {
     if (!isPdfSupported()) {
       showToast(t('pdf.errorUnsupported'), 'error', 6000);
     } else {
-      for (const file of pdfs) addPdfCard(file);
+      // Validate the %PDF- signature before committing a card, so an extension-
+      // spoofed or corrupt-header file is rejected up front rather than landing a
+      // broken placeholder card.
+      for (const file of pdfs) {
+        if (await looksLikePdf(file)) {
+          addPdfCard(file);
+        } else {
+          showToast(t('pdf.errorNotPdf', { name: file.name }), 'error', 6000);
+        }
+      }
     }
     const images = files.filter((f) => !isPdfFile(f));
     if (images.length === 0) return; // PDFs are handled as cards; nothing else to do

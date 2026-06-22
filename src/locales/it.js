@@ -88,6 +88,9 @@ export default {
     errorEngine: 'Caricamento del motore PDF non riuscito.',
     errorGeneric: 'Si è verificato un problema durante l’ottimizzazione del PDF.',
     errorUnsupported: 'L’ottimizzazione PDF non è disponibile in questa versione.',
+    errorTimeout: 'Lo strumento PDF non risponde più. Riprova.',
+    errorNotPdf: '“{name}” non è un file PDF valido.',
+    errorEmpty: 'Questo PDF non ha pagine.',
     modeAria: 'Scegli cosa fare con questo PDF',
     mode: { compress: 'Comprimi', organize: 'Organizza', merge: 'Unisci', toImages: 'In immagini' },
     org: {
@@ -688,11 +691,11 @@ export default {
     content: `
     <div class="help-section">
       <h3>Elaborazione locale</h3>
-      <p>PixelGnome ridimensiona, comprime e converte le tue immagini interamente all’interno del tuo browser web. Tutta l’elaborazione avviene sul tuo dispositivo — nessun server svolge il lavoro.</p>
+      <p>PixelGnome ridimensiona, comprime e converte le tue immagini e i tuoi PDF interamente all’interno del tuo browser web. Tutta l’elaborazione avviene sul tuo dispositivo — nessun server svolge il lavoro.</p>
     </div>
     <div class="help-section">
       <h3>Nessun caricamento, nessuna archiviazione</h3>
-      <p>Le tue immagini non vengono mai caricate o inviate da nessuna parte e non vengono mai memorizzate da noi. Quando chiudi o aggiorni la pagina, vengono cancellate dalla memoria.</p>
+      <p>Le tue immagini e i tuoi PDF non vengono mai caricati o inviati da nessuna parte e non vengono mai memorizzati da noi. Quando chiudi o aggiorni la pagina, vengono cancellati dalla memoria.</p>
       <p>Le uniche cose salvate sono le tue preferenze — impostazioni, tema, eventuali preset che crei e la tua scelta sull’analisi — conservate nell’archiviazione locale del tuo browser, sul tuo dispositivo. Puoi cancellarle in qualsiasi momento con "Ripristina valori predefiniti" o cancellando i dati del browser.</p>
     </div>
     <div class="help-section">
@@ -701,7 +704,7 @@ export default {
     </div>
     <div class="help-section">
       <h3>Analisi</h3>
-      <p>Questo sito usa Google Analytics (tramite Google Tag Manager) per comprendere il traffico aggregato e anonimo — ad esempio quante persone visitano il sito e quali funzioni vengono usate. Misura le visite alle pagine e alcune azioni nell’app, come quando le immagini vengono elaborate o esportate. Conta solo quelle azioni; non vede, riceve o trasmette mai le immagini stesse — le tue immagini restano sempre sul tuo dispositivo.</p>
+      <p>Questo sito usa Google Analytics (tramite Google Tag Manager) per comprendere il traffico aggregato e anonimo — ad esempio quante persone visitano il sito e quali funzioni vengono usate. Misura le visite alle pagine e alcune azioni nell’app, come quando i file vengono elaborati o esportati. Conta solo quelle azioni; non vede, riceve o trasmette mai i file stessi — le tue immagini e i tuoi PDF restano sempre sul tuo dispositivo.</p>
       <p>Google Analytics imposta cookie ed elabora questi dati sui server di Google. Gli indirizzi IP vengono troncati, i dati non vengono usati per identificarti e non li usiamo per la pubblicità. L’analisi viene eseguita solo dopo che hai dato il consenso tramite il banner dei cookie — fino ad allora non viene inviato nulla. Puoi modificare la tua scelta in qualsiasi momento usando <strong>Impostazioni cookie</strong> nel piè di pagina.</p>
       <p>La versione portatile a file singolo di PixelGnome non contiene alcuna analisi e non effettua richieste di rete.</p>
     </div>
@@ -711,7 +714,7 @@ export default {
     </div>
     <div class="help-section">
       <h3>Usa a tuo rischio</h3>
-      <p>PixelGnome è fornito gratuitamente e "così com’è", senza alcuna garanzia. Conserva sempre copie di backup dei file originali importanti prima dell’elaborazione. Non siamo responsabili per eventuali perdite o danni alle tue immagini.</p>
+      <p>PixelGnome è fornito gratuitamente e "così com’è", senza alcuna garanzia. Conserva sempre copie di backup dei file originali importanti prima dell’elaborazione. Non siamo responsabili per eventuali perdite o danni ai tuoi file.</p>
     </div>
     <div class="help-section">
       <p style="color: var(--color-text-muted);">Ultimo aggiornamento: maggio 2026.</p>
@@ -722,7 +725,7 @@ export default {
   // ---- Banner consenso cookie (consent-banner.js) ----
   consent: {
     aria: 'Consenso ai cookie di analisi',
-    text: 'PixelGnome usa Google Analytics per misurare il traffico anonimo e aggregato — solo le visite alle pagine. Nulla viene caricato o inviato finché non accetti. Le tue immagini vengono sempre elaborate localmente e non vengono mai caricate.',
+    text: 'PixelGnome usa Google Analytics per misurare il traffico anonimo e aggregato — solo le visite alle pagine. Nulla viene caricato o inviato finché non accetti. Le tue immagini e i tuoi PDF vengono sempre elaborati localmente e non vengono mai caricati.',
     learn: 'Scopri di più',
     decline: 'Rifiuta',
     accept: 'Accetta',

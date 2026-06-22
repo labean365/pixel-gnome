@@ -86,6 +86,9 @@ export default {
     errorEngine: 'The PDF engine failed to load.',
     errorGeneric: 'Something went wrong optimizing the PDF.',
     errorUnsupported: 'PDF optimization isn’t available in this build.',
+    errorTimeout: 'The PDF tool stopped responding. Please try again.',
+    errorNotPdf: '“{name}” isn’t a valid PDF file.',
+    errorEmpty: 'This PDF has no pages.',
     modeAria: 'Choose what to do with this PDF',
     mode: { compress: 'Compress', organize: 'Organize', merge: 'Merge', toImages: 'To Images' },
     org: {
@@ -671,11 +674,11 @@ export default {
     content: `
     <div class="help-section">
       <h3>Local processing</h3>
-      <p>PixelGnome resizes, compresses, and converts your images entirely inside your web browser. All processing happens on your own device — there is no server doing the work.</p>
+      <p>PixelGnome resizes, compresses, and converts your images and PDFs entirely inside your web browser. All processing happens on your own device — there is no server doing the work.</p>
     </div>
     <div class="help-section">
       <h3>No uploads, no storage</h3>
-      <p>Your images are never uploaded or sent anywhere, and they are never stored by us. When you close or refresh the page, they are cleared from memory.</p>
+      <p>Your images and PDFs are never uploaded or sent anywhere, and they are never stored by us. When you close or refresh the page, they are cleared from memory.</p>
       <p>The only things saved are your own preferences — settings, theme, any presets you create, and your analytics choice — which are kept in your browser's local storage, on your device. You can clear them anytime with "Reset to Defaults" or by clearing your browser data.</p>
     </div>
     <div class="help-section">
@@ -684,7 +687,7 @@ export default {
     </div>
     <div class="help-section">
       <h3>Analytics</h3>
-      <p>This site uses Google Analytics (via Google Tag Manager) to understand aggregate, anonymous traffic — such as how many people visit and which features get used. It measures page visits and a few in-app actions, like when images are processed or exported. It counts those actions only; it never sees, receives, or transmits the images themselves — your images always stay on your device.</p>
+      <p>This site uses Google Analytics (via Google Tag Manager) to understand aggregate, anonymous traffic — such as how many people visit and which features get used. It measures page visits and a few in-app actions, like when files are processed or exported. It counts those actions only; it never sees, receives, or transmits the files themselves — your images and PDFs always stay on your device.</p>
       <p>Google Analytics sets cookies and processes this data on Google's servers. IP addresses are truncated, the data is not used to identify you, and we don't use it for advertising. Analytics runs only after you opt in via the cookie banner — until then, nothing is sent. You can change your choice anytime using <strong>Cookie settings</strong> in the footer.</p>
       <p>The portable single-file version of PixelGnome contains no analytics at all and makes no network requests.</p>
     </div>
@@ -694,7 +697,7 @@ export default {
     </div>
     <div class="help-section">
       <h3>Use at your own risk</h3>
-      <p>PixelGnome is provided free and "as is," without warranty of any kind. Always keep backups of important original files before processing. We are not liable for any loss of or damage to your images.</p>
+      <p>PixelGnome is provided free and "as is," without warranty of any kind. Always keep backups of important original files before processing. We are not liable for any loss of or damage to your files.</p>
     </div>
     <div class="help-section">
       <p style="color: var(--color-text-muted);">Last updated: May 2026.</p>
@@ -705,7 +708,7 @@ export default {
   // ---- Cookie-consent banner (consent-banner.js) ----
   consent: {
     aria: 'Analytics cookie consent',
-    text: 'PixelGnome uses Google Analytics to measure anonymous, aggregate traffic — page visits only. Nothing is loaded or sent until you accept. Your images are always processed locally and are never uploaded.',
+    text: 'PixelGnome uses Google Analytics to measure anonymous, aggregate traffic — page visits only. Nothing is loaded or sent until you accept. Your images and PDFs are always processed locally and are never uploaded.',
     learn: 'Learn more',
     decline: 'Decline',
     accept: 'Accept',

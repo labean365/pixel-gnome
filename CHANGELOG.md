@@ -8,6 +8,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.28.1] — 2026-06-22
+
+### PDF robustness + privacy copy (hardening)
+
+A small hardening round from a pre-feature health check — no new features, just sturdier edges and clearer privacy wording now that PDFs are first-class.
+
+#### Added
+
+- **PDF tool watchdog.** Each PDF worker request now has a 60s no-response watchdog that re-arms on every progress update, so a long multi-page render is never cut off, but a worker that fails to start (or wedges) no longer leaves the editor spinning forever — it surfaces a clear "stopped responding, please try again" message and resets the engine.
+- **Invalid-PDF guard on drop.** Files that only *claim* to be a PDF (wrong contents behind a `.pdf` name) are now rejected up front by checking the `%PDF-` signature, instead of becoming a broken card that only failed when clicked.
+- **Empty-PDF message.** Opening a valid PDF with zero pages now shows "This PDF has no pages." instead of a blank editor.
+
+#### Changed
+
+- **Privacy copy now covers PDFs, not just images.** The privacy panel, cookie-consent banner, and analytics description were image-only; they now state that your images **and PDFs** are processed locally and never uploaded (EN + IT).
+
 ## [v0.28.0] — 2026-06-20
 
 ### PDF polish + transparency fix (Tier D)

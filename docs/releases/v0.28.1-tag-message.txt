@@ -1,0 +1,13 @@
+v0.28.1 — PDF robustness + privacy copy (hardening)
+
+Pre-feature hardening round (no new features):
+- pdf-ui: 60s worker watchdog per call, re-armed on progress — a wedged/failed
+  worker no longer leaves the modal spinning; long streaming ops unaffected
+- main: %PDF- signature check on intake — extension-spoofed .pdf rejected up
+  front instead of landing a broken card
+- pdf-ui: zero-page PDFs show "This PDF has no pages." instead of a blank editor
+- privacy/consent/analytics copy now covers images AND PDFs (EN + IT)
+- new i18n: pdf.errorTimeout / pdf.errorNotPdf / pdf.errorEmpty
+
+verify green (lint 0 errors, format, build:all, check:pdf on dist + dist-single).
+Engine code unchanged.

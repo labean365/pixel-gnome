@@ -184,6 +184,12 @@ function onWorkerMessage(e) {
   }
 }
 
+// Watchdog: if the worker goes silent for this long we assume it's wedged
+// (failed to instantiate, or hung mid-op) and reject so the modal can't spin
+// forever. Generous, and RE-ARMED on every progress tick — so a long multi-page
+// rasterize/optimize that keeps streaming progress is never killed prematurely.
+const CALL_TIMEOUT_MS = 60000;
+
 /** Send one request to the worker and await its matching reply. */
 function call(type, payload, onProgress) {
   return new Promise((resolve, reject) => {
@@ -192,7 +198,39 @@ function call(type, payload, onProgress) {
       return;
     }
     const id = ++msgSeq;
-    pending.set(id, { resolve, reject, onProgress });
+    let timer = null;
+    const clearTimer = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+    const armTimer = () => {
+      clearTimer();
+      timer = setTimeout(() => {
+        if (!pending.has(id)) return;
+        pending.delete(id);
+        // Silent worker → likely wedged. Tear it down so the next call re-creates
+        // a fresh one rather than reusing a dead instance.
+        destroyWorker();
+        reject(new Error(t('pdf.errorTimeout')));
+      }, CALL_TIMEOUT_MS);
+    };
+    pending.set(id, {
+      resolve: (v) => {
+        clearTimer();
+        resolve(v);
+      },
+      reject: (e) => {
+        clearTimer();
+        reject(e);
+      },
+      onProgress: (done, total) => {
+        armTimer(); // progress proves the worker is alive — extend the deadline
+        if (onProgress) onProgress(done, total);
+      },
+    });
+    armTimer();
     worker.postMessage({ type, id, ...payload });
   });
 }
@@ -245,6 +283,13 @@ export async function openPdfModal(file, opts = {}) {
   try {
     const res = await call('pdf-info', { bytes: srcBytes });
     pdfInfo = res.info;
+    // A valid-but-empty PDF (0 pages) would otherwise open a blank editor with no
+    // explanation — surface it instead of building an empty grid.
+    if (!pdfInfo.pageCount) {
+      renderInfo();
+      setStatus(t('pdf.errorEmpty'), 'error');
+      return;
+    }
     pageOrder = Array.from({ length: pdfInfo.pageCount }, (_, i) => i);
     renderInfo();
     buildPageGrid();
