@@ -1,0 +1,23 @@
+v0.28.0 — PDF polish + transparency fix (Tier D)
+
+A small polish round on the PDF pipelines, plus a transparency bug fix
+found during testing.
+
+Added
+- JPEG quality slider in PDF -> Images. Selecting JPEG reveals a quality
+  slider (was fixed at 85). PNG (lossless) is unaffected, so the slider
+  shows only for JPEG. (D1)
+
+Fixed
+- Transparent images no longer get a black background when converted to
+  JPEG. The image worker now composites onto white before JPEG encode
+  (JPEG has no alpha), instead of leaving transparent areas black. Fixes
+  black backgrounds in Images -> PDF too. Alpha-capable outputs
+  (PNG/WebP/AVIF) keep transparency.
+- Added a global [hidden] safety rule so attribute-hidden rows always
+  hide (fixes the To-Images quality slider showing under PNG and the
+  split custom-ranges row).
+
+Verified: npm run verify green (eslint 0 errors, prettier clean,
+build:all, check:pdf on dist + dist-single); MuPDF engine regression
+harness 17/17 pass.

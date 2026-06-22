@@ -8,6 +8,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.28.0] — 2026-06-20
+
+### PDF polish + transparency fix (Tier D)
+
+A small polish round on the PDF pipelines, plus a transparency bug fix found during testing.
+
+#### Added
+
+- **JPEG quality slider in PDF → Images.** When you choose JPEG output, a quality slider appears (it was previously fixed at 85). PNG output is unaffected (it's lossless), so the slider only shows for JPEG. (D1)
+
+#### Fixed
+
+- **Transparent images no longer get a black background when converted to JPEG.** Converting an image with transparency (e.g. a transparent PNG) to JPEG — which has no alpha channel — previously filled the transparent areas with black. They now flatten to **white**, matching other image tools. This also fixes black backgrounds in **Images → PDF** (the PDF embeds the converted image). Alpha-capable outputs (PNG/WebP/AVIF) keep their transparency.
+- **Hidden controls that could stay visible.** Added a `[hidden]` safety rule so attribute-hidden rows always hide — fixes the To-Images quality slider showing under PNG and the split "custom ranges" row.
+
 ## [v0.27.0] — 2026-06-20
 
 ### Mixed-selection export — work with images and PDFs together (Tier C, C4)

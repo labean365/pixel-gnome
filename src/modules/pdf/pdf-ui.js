@@ -114,6 +114,7 @@ let onApplyHandler = null; // called with the edited File so the card can persis
 // To-Images (rasterize) state.
 let rasterFormat = 'png'; // 'png' | 'jpeg'
 let rasterDpi = 150; // 96 (screen) | 150 (standard) | 300 (print)
+let rasterQuality = 0.85; // JPEG quality (0–1); ignored for PNG (D1)
 let rasterCache = null; // { key, pages:[Uint8Array], format } — last render, reused
 
 // Registered by main.js so "Send to editor" can hand page images to the queue
@@ -226,6 +227,7 @@ export async function openPdfModal(file, opts = {}) {
   dragSrcPage = null;
   rasterFormat = 'png';
   rasterDpi = 150;
+  rasterQuality = 0.85;
   rasterCache = null;
 
   renderShell();
@@ -338,7 +340,13 @@ export async function combineMixedToPdf(entries) {
   return mergePdfBlobs(pdfBlobs);
 }
 
-/** JPEG/PNG → raw bytes (pass-through); any other format → JPEG bytes via canvas. */
+/**
+ * Normalize an image blob for MuPDF's imagesToPdf, which only decodes JPEG/PNG.
+ * JPEG/PNG pass through untouched (lossless; JPEG stays compact DCTDecode).
+ * Anything else (WebP/AVIF/GIF/…) is decoded via canvas and flattened onto white,
+ * then encoded as JPEG. Flattening onto white (rather than preserving alpha)
+ * matches the white PDF page and avoids any transparent-region artifacts.
+ */
 async function normalizeForPdf(blob) {
   const type = blob.type || '';
   if (type === 'image/jpeg' || type === 'image/png') {
@@ -475,6 +483,11 @@ function renderShell() {
                 <button class="pdf-preset" data-raster-dpi="300">${t('pdf.img2.dpiPrint')}</button>
               </div>
             </div>
+            <div class="pdf-op-row" id="pdfRasterQualityRow" hidden>
+              <span>${t('pdf.quality')}</span>
+              <input type="range" id="pdfRasterQuality" min="10" max="100" step="1" value="85" aria-label="${t('pdf.quality')}">
+              <output id="pdfRasterQualityOut">85</output>
+            </div>
             <div class="pdf-actions">
               <button class="btn btn-primary" data-action="raster-zip" id="pdfRasterZipBtn">${t('pdf.img2.downloadZip')}</button>
               <button class="btn btn-secondary" data-action="raster-editor" id="pdfRasterEditorBtn">${t('pdf.img2.sendToEditor')}</button>
@@ -599,6 +612,15 @@ function wireEvents() {
   backdrop.querySelectorAll('[data-raster-dpi]').forEach((btn) => {
     btn.addEventListener('click', () => setRasterDpi(Number(btn.dataset.rasterDpi)));
   });
+  const rasterQ = byId('pdfRasterQuality');
+  if (rasterQ) {
+    rasterQ.addEventListener('input', () => {
+      rasterQuality = Number(rasterQ.value) / 100;
+      const out = byId('pdfRasterQualityOut');
+      if (out) out.textContent = rasterQ.value;
+      hideDownload(); // a new quality means the cached render is stale
+    });
+  }
   byId('pdfRasterZipBtn').addEventListener('click', runRasterZip);
   byId('pdfRasterEditorBtn').addEventListener('click', runRasterToEditor);
 }
@@ -1085,6 +1107,9 @@ function setRasterFormat(fmt) {
   backdrop.querySelectorAll('[data-raster-format]').forEach((b) => {
     b.classList.toggle('active', b.dataset.rasterFormat === rasterFormat);
   });
+  // The quality slider only applies to JPEG (PNG is lossless) — show it for JPEG.
+  const qRow = byId('pdfRasterQualityRow');
+  if (qRow) qRow.hidden = rasterFormat !== 'jpeg';
   hideDownload();
 }
 
@@ -1109,12 +1134,14 @@ function rasterMime() {
  * if format+DPI are unchanged. Returns an array of Uint8Array page images.
  */
 async function renderRasterPages() {
-  const key = `${rasterFormat}@${rasterDpi}`;
+  // Quality only affects JPEG output; fold it into the cache key only for JPEG so
+  // PNG renders still reuse the cache when the slider moves.
+  const key = `${rasterFormat}@${rasterDpi}${rasterFormat === 'jpeg' ? `@${rasterQuality}` : ''}`;
   if (rasterCache && rasterCache.key === key) return rasterCache.pages;
   const total = pdfInfo?.pageCount ?? 0;
   const res = await call(
     'pdf-rasterize',
-    { bytes: srcBytes, options: { format: rasterFormat, dpi: rasterDpi, quality: 0.85 } },
+    { bytes: srcBytes, options: { format: rasterFormat, dpi: rasterDpi, quality: rasterQuality } },
     (done) => setStatus(t('pdf.img2.rendering', { done, total }), 'info', true)
   );
   const pages = (res.pages || []).map((p) => (p instanceof Uint8Array ? p : new Uint8Array(p)));

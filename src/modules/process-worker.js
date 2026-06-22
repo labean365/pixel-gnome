@@ -85,6 +85,15 @@ async function processInWorker(blob, settings) {
     const canvas = new OffscreenCanvas(target.width, target.height);
     const ctx = canvas.getContext('2d');
 
+    // JPEG has no alpha channel: encoding a transparent source would otherwise
+    // fill the transparent areas with BLACK. Composite onto white first so
+    // transparency flattens to white (as every other image tool does). Alpha-
+    // capable outputs (PNG/WebP/AVIF) keep their transparency, so no fill there.
+    if (settings.format === 'jpeg') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, target.width, target.height);
+    }
+
     if (settings.mode === 'exact' && (srcWidth !== target.width || srcHeight !== target.height)) {
       // Center-crop for exact mode
       const srcAspect = srcWidth / srcHeight;

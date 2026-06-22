@@ -190,6 +190,13 @@
   padding: 0;
 }
 
+/* Safety net for the `hidden` attribute: many components set a `display:` value
+   (flex/grid) on their base class, which silently overrides the UA `[hidden]`
+   rule and leaves "hidden" elements visible. Make `hidden` always win. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
@@ -3976,6 +3983,17 @@ fieldset.setting-group legend.setting-label {
 
 .pdf-op-row > span {
   min-width: 5.5em;
+  color: var(--color-text-secondary);
+}
+
+/* To-Images JPEG quality slider row (D1) */
+.pdf-op-row input[type='range'] {
+  flex: 1;
+}
+
+.pdf-op-row > output {
+  min-width: 3ch;
+  text-align: right;
   color: var(--color-text-secondary);
 }
 
