@@ -8,6 +8,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.30.0] — 2026-06-23
+
+### PDF first-class polish — UX review fixes (Tier H, H1–H6)
+
+A focused round addressing the majors from a full UX/UI review (PDF focus): the PDF side now behaves consistently with the image side in editing, output, parity, mobile, and accessibility.
+
+#### Fixed
+
+- **Page edits now compose with the drill-in tools (H1).** Compress, Split, To-Images, Extract, and Remove previously ran on the _original_ PDF, so staged page changes were silently dropped — e.g. rotating a page then compressing produced an un-rotated file. They now run on the edited document (rotations / reorder / deletes baked in first), and Compress measures savings against the edited input so deleting pages isn't miscredited as compression.
+- **Drill-in toolbars wrap on phones (H5).** `.pdf-select-toolbar` (select / clear / count + rotate / delete / extract / remove) and the edit bar no longer overflow at narrow widths — they wrap, with comfortable tap sizing and the flex spacers neutralized below 768px.
+
+#### Added
+
+- **Per-card Download + savings on PDF cards (H4).** PDF cards now have their own Download button (previously you had to open the editor) and show a before→after savings line after an in-place optimize, mirroring the image cards. (A per-card Copy was intentionally not added — browsers don't allow writing `application/pdf` to the clipboard.)
+- **Recipes act on PDFs (H2).** The Step-2 recipes are no longer image-only: **Compress / optimize** and **Make email-safe** now optimize the PDFs in the workspace (the selected ones, or all when none are selected), and **Convert format** points you to a PDF's "To Images" tool. Images continue to work exactly as before.
+
+#### Changed
+
+- **Drill-in tools are now a single, tidy set (H3).** Compress / Split / To-Images behave as a mutually-exclusive accordion — opening one closes the others, and a tool's result + readout clears when it's collapsed or another is opened, so a finished "17% smaller" + Download no longer lingers detached from its control. A new **"Create a new file"** heading separates these (which produce a new file) from the page edits above (which change the document). EN + IT.
+
+#### Accessibility
+
+- **Focus trap on the editors (H6).** The PDF drill-in and the image crop modal now keep keyboard focus inside while open and restore it to the control that opened them on close (new `src/modules/shared/focus-trap.js`, shared by both).
+
 ## [v0.29.0] — 2026-06-22
 
 ### PDF page-range export + batch optimize (Tier D)

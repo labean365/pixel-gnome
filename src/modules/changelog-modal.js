@@ -9,6 +9,48 @@
 export function getChangelogContent() {
   return `
     <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.30.0 — PDF Editing Polish</div>
+      <div class="help-changelog-items">
+        Several refinements that make working with PDFs feel first-class. <strong>Page changes now carry through the tools</strong> — rotate, reorder, or delete pages and then Compress, Split, or convert To Images, and your edits are included in the result. The Step&nbsp;2 recipes (<strong>Compress / optimize</strong> and <strong>Make email-safe</strong>) now work on PDFs too, not just images. Each PDF card gets its own <strong>Download</strong> button and shows how much space an optimize saved, matching the image cards. Inside a PDF, the Compress / Split / To&nbsp;Images tools are now a tidy one-at-a-time set under a <strong>“Create a new file”</strong> heading, so a finished result no longer lingers out of place. Both the PDF and image editors now keep keyboard focus inside while open (and hand it back when you close), and the PDF toolbars wrap cleanly on phones. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.29.0 — PDF Page-Range Export &amp; Batch Optimize</div>
+      <div class="help-changelog-items">
+        Turn just the pages you want into images — the page grid now drives <strong>To Images</strong> with an <strong>All pages / Selected</strong> toggle. And when you have several PDFs, select them and use <strong>Optimize PDFs</strong> to compress them all in one go, with a total-saved readout. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.28.1 — PDF Robustness &amp; Privacy Wording</div>
+      <div class="help-changelog-items">
+        Sturdier edges: the PDF tools recover gracefully if the engine ever stalls, files that only <em>pretend</em> to be PDFs are caught the moment you drop them, and an empty PDF shows a clear message instead of a blank editor. The privacy and cookie wording now mentions your <strong>PDFs</strong> as well as images — everything still stays on your device. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.28.0 — PDF Polish &amp; Transparency Fix</div>
+      <div class="help-changelog-items">
+        A <strong>quality slider</strong> now appears when you render a PDF to JPEG images (PNG stays lossless, so it only shows for JPEG). Fixed: transparent images converted to JPEG — including in <strong>Images &rarr; PDF</strong> — no longer get a black background; they flatten to white like the other tools. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.27.0 — Work with Images &amp; PDFs Together</div>
+      <div class="help-changelog-items">
+        Multi-select now spans <strong>both images and PDFs</strong>, and the bulk actions understand mixed selections: <strong>Download</strong> everything in place, <strong>Combine to PDF</strong> (images become pages, in list order, with any selected PDFs merged in), or <strong>ZIP</strong> it all together. Rotate / flip apply to images and quietly step aside when a PDF is in the selection. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.26.0 — Recipes: Start with the Task</div>
+      <div class="help-changelog-items">
+        Step&nbsp;2 now opens with <strong>“What do you want to do?”</strong> — one-tap recipes (<strong>Compress / optimize</strong>, <strong>Make email-safe</strong>, <strong>Convert format</strong>) that set sensible options for you and reveal the controls that matter, with the familiar size presets still right below. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.25.0 — PDFs Join the Workspace</div>
+      <div class="help-changelog-items">
+        PDFs now come in through the <strong>same door as images</strong>: drop one and it appears as a card in the shared workspace, then click to open a full editor built around a <strong>page-thumbnail grid</strong> — reorder, rotate, delete, extract, split, compress, or turn pages into images, all in one place. The old separate pop-up is gone, so the PDF and image editors finally read as one app. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
       <div class="help-changelog-version">v0.24.0 — PDF Toolkit</div>
       <div class="help-changelog-items">
         PixelGnome now works with <strong>PDFs</strong>, all in your browser — nothing is uploaded. Drop a PDF to <strong>compress</strong> it (recompresses images and strips bloat while keeping the text selectable), <strong>organize</strong> it (extract, remove, or split pages from a thumbnail grid), or <strong>merge</strong> several PDFs into one with a reorderable list. You can also turn <strong>images into a PDF</strong> (one page per image, from the export bar) and go the other way — turn <strong>a PDF into images</strong> (render each page to PNG or JPEG at Screen / Standard / Print resolution, downloaded as a ZIP or sent straight into the editor for resizing). The start screen gets an <strong>“Optimize a PDF”</strong> shortcut, and the default preset is now <strong>Original size</strong> (convert &amp; compress, no resize). (This changelog stays in English.)
