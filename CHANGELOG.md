@@ -8,6 +8,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.31.0] — 2026-06-23
+
+### PDF & workspace polish — UX review minors (Tier H, H7–H18)
+
+A polish round clearing the remaining review items: clearer wording, consistent action vocabulary, and accessibility fixes across the drill-in and workspace.
+
+#### Added
+
+- **Confirm before discarding page edits (H9).** Closing the PDF editor (back / Esc / clicking the backdrop) with unsaved rotate / reorder / delete now asks before throwing the changes away.
+- **Resolution shows its DPI (H10).** The "To Images" resolution options now read **Screen · 96 / Standard · 150 / Print · 300**.
+- **Reorder hint (H18).** Page tiles show how to reorder (drag, or Alt+← / Alt+→) on hover/focus.
+
+#### Changed
+
+- **Task-first wording (H12).** Step 1 is **"Add files"** (not "Add images"), Step 2 is **"Choose what to do"** (not "Choose a size"), the recipe row is labelled **"Recipes"**, and the empty-state hero reads **"Drop images or PDFs to resize, convert, or compress."** The page `<title>` now mentions PDFs.
+- **Consistent export vocabulary (H14).** The same action now uses the same words everywhere: **Combine to PDF** (was "PDF" in the top bar) and **Download ZIP** (was "ZIP" in the bulk bar).
+- **Clearer drill-in toolbar (H7).** A divider and tooltips separate the **edit-this-document** actions (rotate / delete — staged until Apply/Export) from the **save-a-new-file** actions (extract / remove — download now). The Compress tool now opens by default so the tools are visible (H8).
+- **Stale copy fixed (H15).** The editor's leftover "Optimize PDF" / "PDF optimizer" labels are now "Edit PDF" / "Close editor"; the bulk aria covers files (not just images); the optimize summary uses proper singular/plural.
+- **Localized the full-window drop overlay (H13).** "Drop images anywhere" is now translatable and reads "Drop images or PDFs anywhere" (EN + IT).
+
+#### Accessibility
+
+- **One tab stop per page (H18).** Each page tile is reached with a single Tab (the checkbox), not two; keyboard reorder follows the page to its new spot.
+- **Explained disabled controls (H16).** Bulk Rotate / Flip, greyed when a PDF is selected, now carry a tooltip ("Rotate and flip apply to images only").
+- **Muted-text contrast (H17).** Informational text that used the low-contrast muted token (card metric labels, the accepted-formats list, the export readout, history timestamps, setting hints) now uses the AA-passing secondary color; decorative/placeholder uses are unchanged.
+- **Removed a redundant selection indicator (H11).** Selected page tiles showed two checkmarks; now just the real checkbox.
+
 ## [v0.30.0] — 2026-06-23
 
 ### PDF first-class polish — UX review fixes (Tier H, H1–H6)

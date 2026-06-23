@@ -723,7 +723,7 @@ fieldset.setting-group legend.setting-label {
 .wf-export-meta {
   margin: 0;
   font-size: var(--text-sm);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary); /* H17: informational readout — meet AA */
   text-align: center;
 }
 
@@ -771,7 +771,7 @@ fieldset.setting-group legend.setting-label {
 }
 
 .setting-hint-muted {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary); /* H17: hint text carries info — meet AA */
 }
 
 .setting-select,
@@ -1178,7 +1178,7 @@ fieldset.setting-group legend.setting-label {
 
 .drop-zone-formats {
   font-size: 0.625rem;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary); /* H17: accepted-formats list is info — meet AA */
   font-family: var(--font-mono);
 }
 
@@ -1392,7 +1392,7 @@ fieldset.setting-group legend.setting-label {
 
 /* Labels column */
 .stat-label {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary); /* H17: card metric labels are info — meet AA */
   font-weight: 500;
   font-size: var(--text-sm);
   white-space: nowrap;
@@ -1867,7 +1867,7 @@ fieldset.setting-group legend.setting-label {
 }
 
 .history-entry-time {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary); /* H17: timestamp is info — meet AA */
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -4082,6 +4082,16 @@ fieldset.setting-group legend.setting-label {
   color: var(--color-text-secondary);
 }
 
+/* Visual divider between the staged page-edit actions and the "save a new file"
+   actions in the selection toolbar (H7). Collapses cleanly when the row wraps. */
+.pdf-toolbar-divider {
+  width: 1px;
+  align-self: stretch;
+  min-height: 1.5em;
+  background: var(--color-border-light);
+  margin: 0 var(--space-xs);
+}
+
 /* --- Page-thumbnail selection grid --- */
 .pdf-page-grid {
   display: grid;
@@ -4131,24 +4141,9 @@ fieldset.setting-group legend.setting-label {
   z-index: 1;
 }
 
-/* A check badge in the corner of selected tiles, on top of the thumbnail. */
-.pdf-thumb.selected::after {
-  content: '✓';
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  color: #fff;
-  background: var(--color-accent);
-  border-radius: 50%;
-}
+/* H11: the redundant decorative ✓ badge was removed — the real top-left checkbox
+   (.pdf-thumb-check) is the single selection indicator. The selected tile is also
+   shown via the .selected border + tint below. */
 
 .pdf-thumb-stage {
   display: flex;

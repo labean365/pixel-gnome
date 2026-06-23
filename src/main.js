@@ -809,8 +809,14 @@ function renderSelectionState() {
   // selection contains any PDF. Delete stays enabled (mixed delete is wired).
   const counts = selectionCounts();
   const blockEdits = counts.pdfs > 0;
+  // H16: explain why rotate/flip are greyed when the selection includes a PDF
+  // (they apply to images only). Set a title on disable; restore the normal
+  // custom-tooltip state on enable.
   for (const btn of [bulkRotateCcwBtn, bulkRotateCwBtn, bulkFlipHBtn, bulkFlipVBtn]) {
-    if (btn) btn.disabled = blockEdits;
+    if (!btn) continue;
+    btn.disabled = blockEdits;
+    if (blockEdits) btn.title = t('bulk.rotateFlipImagesOnly');
+    else btn.removeAttribute('title');
   }
 
   // "Optimize PDFs" (D6) only makes sense for PDFs — show it only when the

@@ -4,6 +4,8 @@
  * Validates file types and passes File[] to a callback.
  */
 
+import { t } from './i18n.js';
+
 const ACCEPTED_TYPES = new Set([
   'image/jpeg',
   'image/png',
@@ -85,7 +87,7 @@ function createWindowOverlay() {
         <polyline points="17 8 12 3 7 8"/>
         <line x1="12" y1="3" x2="12" y2="15"/>
       </svg>
-      <span class="full-window-drop-text">Drop images anywhere</span>
+      <span class="full-window-drop-text">${t('dropzone.overlay')}</span>
     </div>
   `;
   document.body.appendChild(windowOverlay);

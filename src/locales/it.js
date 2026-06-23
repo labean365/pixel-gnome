@@ -28,7 +28,7 @@ export default {
     dismiss: 'Chiudi',
   },
 
-  step1: { title: 'Aggiungi immagini' },
+  step1: { title: 'Aggiungi file' },
 
   dropzone: {
     aria: 'Trascina qui immagini o PDF, oppure clicca per selezionarli. Accetta file JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF e PDF.',
@@ -36,19 +36,23 @@ export default {
     hint: 'oppure clicca per selezionarli',
     formats: 'JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF, PDF',
     fileInputAria: 'Scegli file immagine o PDF',
+    overlay: 'Trascina immagini o PDF ovunque',
   },
 
   pdf: {
     dialogAria: 'Modifica PDF',
-    title: 'Ottimizza PDF',
+    title: 'Modifica PDF',
     close: 'Chiudi',
-    closeAria: 'Chiudi l’ottimizzatore PDF',
+    closeAria: 'Chiudi l’editor',
     back: 'Torna ai file',
     backAria: 'Torna ai tuoi file',
     edit: {
       rotateLeft: 'Ruota a sinistra',
       rotateRight: 'Ruota a destra',
+      rotateTip: 'Ruota le pagine selezionate (in sospeso fino ad Applica o Esporta)',
       delete: 'Elimina',
+      deleteTip:
+        'Rimuovi le pagine selezionate da questo documento (in sospeso fino ad Applica o Esporta)',
       errDeleteAll: 'Impossibile eliminare tutte le pagine.',
       reset: 'Ripristina',
       export: 'Esporta',
@@ -56,6 +60,7 @@ export default {
       applying: 'Applicazione delle modifiche…',
       exporting: 'Preparazione dell’esportazione…',
       preflight: '{kept} di {total} pagine · {rotated} ruotate · originale invariato',
+      discardConfirm: 'Vuoi scartare le modifiche alle pagine non salvate?',
     },
     loading: 'Lettura del PDF…',
     pages: { one: '{count} pagina', other: '{count} pagine' },
@@ -96,6 +101,9 @@ export default {
     mode: { compress: 'Comprimi', organize: 'Organizza', merge: 'Unisci', toImages: 'In immagini' },
     org: {
       operation: 'Operazione',
+      reorderHint: 'Trascina per riordinare, o premi Alt+← / Alt+→',
+      extractTip: 'Salva le pagine selezionate come nuovo PDF (scarica subito)',
+      removeTip: 'Salva una copia senza le pagine selezionate (scarica subito)',
       opExtract: 'Estrai le pagine selezionate',
       opRemove: 'Rimuovi le pagine selezionate',
       opSplit: 'Dividi in più file',
@@ -145,12 +153,12 @@ export default {
       errNone: 'Nessuna immagine elaborata da combinare in un PDF.',
     },
     img2: {
-      hint: 'Genera un’immagine per ogni pagina. Scegli formato e risoluzione.',
+      hint: 'Trasforma le pagine in immagini — scegli formato e risoluzione.',
       format: 'Formato',
       resolution: 'Risoluzione',
-      dpiScreen: 'Schermo',
-      dpiStandard: 'Standard',
-      dpiPrint: 'Stampa',
+      dpiScreen: 'Schermo · 96',
+      dpiStandard: 'Standard · 150',
+      dpiPrint: 'Stampa · 300',
       pages: 'Pagine',
       scopeAll: 'Tutte le pagine',
       scopeSelected: 'Selezionate ({count})',
@@ -177,10 +185,10 @@ export default {
     clear: 'Cancella',
   },
 
-  step2: { title: 'Scegli una dimensione' },
+  step2: { title: 'Scegli cosa fare' },
 
   recipe: {
-    label: 'Cosa vuoi fare?',
+    label: 'Ricette',
     compress: 'Comprimi / ottimizza',
     compressTitle: 'Riduci la dimensione del file mantenendo le dimensioni originali',
     emailSafe: 'Rendi adatto all’email',
@@ -287,7 +295,7 @@ export default {
   empty: {
     aria: 'Per iniziare',
     dropAria: 'Trascina qui immagini o PDF o fai clic per scegliere i file',
-    title: 'Trascina immagini da ridimensionare, o un PDF da ottimizzare',
+    title: 'Trascina immagini o PDF da ridimensionare, convertire o comprimere',
     sub: 'Non lasciano mai il tuo browser. Oppure premi <kbd class="content-empty-kbd">⌘O</kbd> per scegliere i file.',
     chipsAria: 'Inizia con un preset',
     chipPdf: 'Ottimizza un PDF',
@@ -309,7 +317,7 @@ export default {
     responsiveZipTip: 'Esporta tutte le immagini in più dimensioni come ZIP',
     downloadZip: 'Scarica ZIP',
     downloadZipTip: 'Esporta tutte le immagini come un unico archivio ZIP',
-    downloadPdf: 'PDF',
+    downloadPdf: 'Combina in PDF',
     downloadPdfTip: 'Combina tutte le immagini in un unico PDF (un’immagine per pagina)',
     download: 'Scarica',
     downloadTip: 'Scarica singolarmente tutte le immagini elaborate',
@@ -317,7 +325,8 @@ export default {
   },
 
   bulk: {
-    aria: 'Azioni in blocco per le immagini selezionate',
+    aria: 'Azioni in blocco per i file selezionati',
+    rotateFlipImagesOnly: 'Ruota e capovolgi valgono solo per le immagini',
     rotateLeft: 'Ruota a sinistra',
     rotateLeftTip: 'Ruota le immagini selezionate di 90° in senso antiorario',
     rotateLeftAria: 'Ruota la selezione a sinistra',
@@ -333,7 +342,7 @@ export default {
     download: 'Scarica',
     downloadTip: 'Scarica singolarmente le immagini selezionate',
     downloadAria: 'Scarica le immagini selezionate',
-    zip: 'ZIP',
+    zip: 'Scarica ZIP',
     zipTip: 'Raccogli le immagini selezionate in un unico archivio ZIP',
     zipAria: 'Scarica le immagini selezionate come ZIP',
     combine: 'Combina in PDF',
@@ -344,8 +353,14 @@ export default {
       'Comprimi i PDF selezionati (ricomprime le immagini, rimuove il superfluo; il testo resta selezionabile)',
     optimizeAria: 'Ottimizza i PDF selezionati',
     optimizingN: 'Ottimizzazione {done}/{total}…',
-    optimizeStart: 'Ottimizzazione di {count} PDF…',
-    optimizeDone: 'Ottimizzati {count} PDF · risparmio {pct}%',
+    optimizeStart: {
+      one: 'Ottimizzazione di {count} PDF…',
+      other: 'Ottimizzazione di {count} PDF…',
+    },
+    optimizeDone: {
+      one: 'Ottimizzato {count} PDF · risparmio {pct}%',
+      other: 'Ottimizzati {count} PDF · risparmio {pct}%',
+    },
     optimizeFailed: 'Impossibile ottimizzare i PDF selezionati.',
     delete: 'Elimina',
     deleteTip: 'Rimuovi i file selezionati dalla coda (Canc / Backspace)',

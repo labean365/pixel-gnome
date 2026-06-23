@@ -483,11 +483,14 @@ function renderShell() {
           <button type="button" class="pdf-linkbtn" data-action="select-none">${t('pdf.org.clear')}</button>
           <span class="pdf-select-count" id="pdfSelectCount"></span>
           <span class="pdf-toolbar-spacer"></span>
-          <button type="button" class="btn btn-secondary btn-sm" data-action="rotate-ccw" id="pdfRotateCcwBtn" disabled>${t('pdf.edit.rotateLeft')}</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-action="rotate-cw" id="pdfRotateCwBtn" disabled>${t('pdf.edit.rotateRight')}</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-action="delete" id="pdfDeleteBtn" disabled>${t('pdf.edit.delete')}</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-action="extract" id="pdfExtractBtn" disabled>${t('pdf.org.buildOp.extract')}</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-action="remove" id="pdfRemoveBtn" disabled>${t('pdf.org.buildOp.remove')}</button>
+          <!-- Edit-this-document actions: staged until Apply/Export (H7). -->
+          <button type="button" class="btn btn-secondary btn-sm" data-action="rotate-ccw" id="pdfRotateCcwBtn" title="${t('pdf.edit.rotateTip')}" disabled>${t('pdf.edit.rotateLeft')}</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="rotate-cw" id="pdfRotateCwBtn" title="${t('pdf.edit.rotateTip')}" disabled>${t('pdf.edit.rotateRight')}</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="delete" id="pdfDeleteBtn" title="${t('pdf.edit.deleteTip')}" disabled>${t('pdf.edit.delete')}</button>
+          <!-- Divider: the next two SAVE A NEW FILE from the selection (immediate). -->
+          <span class="pdf-toolbar-divider" aria-hidden="true"></span>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="extract" id="pdfExtractBtn" title="${t('pdf.org.extractTip')}" disabled>${t('pdf.org.buildOp.extract')}</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="remove" id="pdfRemoveBtn" title="${t('pdf.org.removeTip')}" disabled>${t('pdf.org.buildOp.remove')}</button>
         </div>
 
         <div class="pdf-page-grid" id="pdfPageGrid"></div>
@@ -496,7 +499,7 @@ function renderShell() {
              edits above, which change the document itself). Mutually exclusive (H3). -->
         <div class="pdf-tools-heading">${t('pdf.toolsHeading')}</div>
 
-        <details class="pdf-panel" id="pdfPanelCompress">
+        <details class="pdf-panel" id="pdfPanelCompress" open>
           <summary>${t('pdf.mode.compress')}</summary>
           <div class="pdf-panel-body">
             <div class="pdf-presets" role="group" aria-label="${t('pdf.presetsAria')}">
@@ -631,9 +634,9 @@ function renderInfo() {
 /* ------------------------------------------------------------------ */
 
 function wireEvents() {
-  backdrop.querySelector('[data-action="close"]').addEventListener('click', closePdfModal);
+  backdrop.querySelector('[data-action="close"]').addEventListener('click', requestClose);
   backdrop.addEventListener('click', (e) => {
-    if (e.target === backdrop && !busy) closePdfModal();
+    if (e.target === backdrop) requestClose();
   });
   document.addEventListener('keydown', onKeyDown);
 
@@ -743,7 +746,18 @@ function wireEvents() {
 }
 
 function onKeyDown(e) {
-  if (e.key === 'Escape' && !busy) closePdfModal();
+  if (e.key === 'Escape') requestClose();
+}
+
+/**
+ * Close affordances (back button / Escape / backdrop click) route through here so
+ * unsaved page edits aren't silently discarded (H9). Internal closes after an
+ * intentional action (Apply / Export / send-to-editor) call closePdfModal directly.
+ */
+function requestClose() {
+  if (busy) return;
+  if (isEdited() && !window.confirm(t('pdf.edit.discardConfirm'))) return;
+  closePdfModal();
 }
 
 function syncQualityOutput() {
@@ -782,18 +796,21 @@ function buildPageGrid() {
     tile.className = 'pdf-thumb';
     tile.dataset.page = String(orig);
     tile.draggable = true;
-    tile.tabIndex = 0;
+    // H18: the tile is a <label> wrapping the checkbox — the checkbox is the
+    // single focusable control (one tab stop per page, not two). The reorder
+    // hint surfaces the keyboard shortcut on hover/focus.
+    tile.title = t('pdf.org.reorderHint');
     const selected = selectedPages.has(orig);
     if (selected) tile.classList.add('selected');
     const deg = rotations.get(orig) || 0;
     const rot = deg ? ` style="transform: rotate(${deg}deg)"` : '';
     tile.innerHTML = `
-      <input type="checkbox" class="pdf-thumb-check" data-page="${orig}"${selected ? ' checked' : ''} aria-label="${t('pdf.org.pageLabel', { n: pos + 1 })}">
+      <input type="checkbox" class="pdf-thumb-check" data-page="${orig}"${selected ? ' checked' : ''} aria-label="${t('pdf.org.pageLabel', { n: pos + 1 })}" title="${t('pdf.org.reorderHint')}">
       <span class="pdf-thumb-stage" aria-hidden="true"${rot}></span>
       <span class="pdf-thumb-no">${pos + 1}</span>`;
     const cb = tile.querySelector('.pdf-thumb-check');
     cb.addEventListener('change', () => togglePage(orig, cb.checked));
-    wireTileDnd(tile, orig);
+    wireTileDnd(tile, cb, orig);
     grid.appendChild(tile);
     thumbObserver.observe(tile);
   });
@@ -801,8 +818,12 @@ function buildPageGrid() {
   updateEditBar();
 }
 
-/** Wire drag-and-drop + Alt+Arrow keyboard reorder on a page tile. */
-function wireTileDnd(tile, orig) {
+/**
+ * Wire drag-and-drop (on the tile) + Alt+Arrow keyboard reorder (on the tile's
+ * checkbox, which is the single focusable control — H18). After a keyboard move,
+ * focus follows the page to its new checkbox.
+ */
+function wireTileDnd(tile, cb, orig) {
   tile.addEventListener('dragstart', (e) => {
     dragSrcPage = orig;
     tile.classList.add('dragging');
@@ -820,15 +841,16 @@ function wireTileDnd(tile, orig) {
     e.preventDefault();
     movePage(dragSrcPage, orig);
   });
-  tile.addEventListener('keydown', (e) => {
+  cb.addEventListener('keydown', (e) => {
     if (!e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
     e.preventDefault();
     const i = pageOrder.indexOf(orig);
     const j = i + (e.key === 'ArrowLeft' ? -1 : 1);
     if (i < 0 || j < 0 || j >= pageOrder.length) return;
     [pageOrder[i], pageOrder[j]] = [pageOrder[j], pageOrder[i]];
+    editSeq++;
     buildPageGrid();
-    backdrop?.querySelector(`.pdf-thumb[data-page="${orig}"]`)?.focus();
+    backdrop?.querySelector(`.pdf-thumb[data-page="${orig}"] .pdf-thumb-check`)?.focus();
   });
 }
 

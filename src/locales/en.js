@@ -27,7 +27,7 @@ export default {
     dismiss: 'Dismiss',
   },
 
-  step1: { title: 'Add images' },
+  step1: { title: 'Add files' },
 
   dropzone: {
     aria: 'Drop images or PDFs here or click to browse. Accepts JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF, and PDF files.',
@@ -35,19 +35,22 @@ export default {
     hint: 'or click to browse',
     formats: 'JPEG, PNG, WebP, GIF, HEIC, SVG, AVIF, PDF',
     fileInputAria: 'Choose image or PDF files',
+    overlay: 'Drop images or PDFs anywhere',
   },
 
   pdf: {
     dialogAria: 'Edit PDF',
-    title: 'Optimize PDF',
+    title: 'Edit PDF',
     close: 'Close',
-    closeAria: 'Close PDF optimizer',
+    closeAria: 'Close editor',
     back: 'Back to files',
     backAria: 'Back to your files',
     edit: {
       rotateLeft: 'Rotate left',
       rotateRight: 'Rotate right',
+      rotateTip: 'Rotate the selected pages (staged until you Apply or Export)',
       delete: 'Delete',
+      deleteTip: 'Remove the selected pages from this document (staged until you Apply or Export)',
       errDeleteAll: 'Can’t delete every page.',
       reset: 'Reset',
       export: 'Export',
@@ -55,6 +58,7 @@ export default {
       applying: 'Applying changes…',
       exporting: 'Preparing export…',
       preflight: '{kept} of {total} pages · {rotated} rotated · original unchanged',
+      discardConfirm: 'Discard your unsaved page changes?',
     },
     loading: 'Reading PDF…',
     pages: { one: '{count} page', other: '{count} pages' },
@@ -94,6 +98,9 @@ export default {
     mode: { compress: 'Compress', organize: 'Organize', merge: 'Merge', toImages: 'To Images' },
     org: {
       operation: 'Operation',
+      reorderHint: 'Drag to reorder, or press Alt+← / Alt+→',
+      extractTip: 'Save the selected pages as a new PDF (downloads now)',
+      removeTip: 'Save a copy without the selected pages (downloads now)',
       opExtract: 'Extract selected pages',
       opRemove: 'Remove selected pages',
       opSplit: 'Split into multiple files',
@@ -140,12 +147,12 @@ export default {
       errNone: 'No processed images to combine into a PDF.',
     },
     img2: {
-      hint: 'Render every page to an image. Pick a format and resolution.',
+      hint: 'Turn pages into images — pick a format and resolution.',
       format: 'Format',
       resolution: 'Resolution',
-      dpiScreen: 'Screen',
-      dpiStandard: 'Standard',
-      dpiPrint: 'Print',
+      dpiScreen: 'Screen · 96',
+      dpiStandard: 'Standard · 150',
+      dpiPrint: 'Print · 300',
       pages: 'Pages',
       scopeAll: 'All pages',
       scopeSelected: 'Selected ({count})',
@@ -171,10 +178,10 @@ export default {
     clear: 'Clear',
   },
 
-  step2: { title: 'Choose a size' },
+  step2: { title: 'Choose what to do' },
 
   recipe: {
-    label: 'What do you want to do?',
+    label: 'Recipes',
     compress: 'Compress / optimize',
     compressTitle: 'Shrink file size, keeping the original dimensions',
     emailSafe: 'Make email-safe',
@@ -279,7 +286,7 @@ export default {
   empty: {
     aria: 'Get started',
     dropAria: 'Drop images or PDFs here or click to choose files',
-    title: 'Drop images to resize, or a PDF to optimize',
+    title: 'Drop images or PDFs to resize, convert, or compress',
     sub: 'They never leave your browser. Or press <kbd class="content-empty-kbd">⌘O</kbd> to choose files.',
     chipsAria: 'Start with a preset',
     chipPdf: 'Optimize a PDF',
@@ -301,7 +308,7 @@ export default {
     responsiveZipTip: 'Export all images at multiple sizes as a ZIP',
     downloadZip: 'Download ZIP',
     downloadZipTip: 'Export all images as a single ZIP archive',
-    downloadPdf: 'PDF',
+    downloadPdf: 'Combine to PDF',
     downloadPdfTip: 'Combine all images into one PDF (one image per page)',
     download: 'Download',
     downloadTip: 'Download all processed images individually',
@@ -309,7 +316,8 @@ export default {
   },
 
   bulk: {
-    aria: 'Bulk actions for selected images',
+    aria: 'Bulk actions for selected files',
+    rotateFlipImagesOnly: 'Rotate and flip apply to images only',
     rotateLeft: 'Rotate Left',
     rotateLeftTip: 'Rotate selected images 90° counter-clockwise',
     rotateLeftAria: 'Rotate selected left',
@@ -325,7 +333,7 @@ export default {
     download: 'Download',
     downloadTip: 'Download selected images individually',
     downloadAria: 'Download selected images',
-    zip: 'ZIP',
+    zip: 'Download ZIP',
     zipTip: 'Bundle selected images into a single ZIP archive',
     zipAria: 'Download selected images as ZIP',
     combine: 'Combine to PDF',
@@ -336,8 +344,11 @@ export default {
       'Compress the selected PDFs (recompress images, strip bloat; text stays selectable)',
     optimizeAria: 'Optimize selected PDFs',
     optimizingN: 'Optimizing {done}/{total}…',
-    optimizeStart: 'Optimizing {count} PDFs…',
-    optimizeDone: 'Optimized {count} PDF(s) · saved {pct}%',
+    optimizeStart: { one: 'Optimizing {count} PDF…', other: 'Optimizing {count} PDFs…' },
+    optimizeDone: {
+      one: 'Optimized {count} PDF · saved {pct}%',
+      other: 'Optimized {count} PDFs · saved {pct}%',
+    },
     optimizeFailed: 'Couldn’t optimize the selected PDFs.',
     delete: 'Delete',
     deleteTip: 'Remove selected files from the queue (Delete / Backspace)',

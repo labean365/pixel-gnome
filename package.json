@@ -1,7 +1,7 @@
 {
   "name": "pixel-gnome",
   "private": true,
-  "version": "0.30.0",
+  "version": "0.31.0",
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "author": "321Enterprise (https://321enterprise.com/)",

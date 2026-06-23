@@ -9,6 +9,12 @@
 export function getChangelogContent() {
   return `
     <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.31.0 — Polish &amp; Accessibility</div>
+      <div class="help-changelog-items">
+        A round of clarity and accessibility refinements. Clearer wording — Step&nbsp;1 is <strong>“Add files”</strong>, Step&nbsp;2 is <strong>“Choose what to do”</strong>, and the same action now uses the same words everywhere (<strong>Combine to PDF</strong>, <strong>Download ZIP</strong>). In the PDF editor, a divider and tooltips separate the <strong>edit-this-document</strong> actions (rotate / delete) from the <strong>save-a-new-file</strong> ones (extract / remove), the Compress tool opens by default, the resolutions now show their DPI (<strong>Screen · 96 / Standard · 150 / Print · 300</strong>), and closing with unsaved page changes now asks first. Accessibility: each page is a single tab stop with a reorder hint, disabled bulk Rotate / Flip explain why they’re greyed, low-contrast informational text was darkened to meet WCAG AA, and a redundant selection checkmark was removed. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
       <div class="help-changelog-version">v0.30.0 — PDF Editing Polish</div>
       <div class="help-changelog-items">
         Several refinements that make working with PDFs feel first-class. <strong>Page changes now carry through the tools</strong> — rotate, reorder, or delete pages and then Compress, Split, or convert To Images, and your edits are included in the result. The Step&nbsp;2 recipes (<strong>Compress / optimize</strong> and <strong>Make email-safe</strong>) now work on PDFs too, not just images. Each PDF card gets its own <strong>Download</strong> button and shows how much space an optimize saved, matching the image cards. Inside a PDF, the Compress / Split / To&nbsp;Images tools are now a tidy one-at-a-time set under a <strong>“Create a new file”</strong> heading, so a finished result no longer lingers out of place. Both the PDF and image editors now keep keyboard focus inside while open (and hand it back when you close), and the PDF toolbars wrap cleanly on phones. (This changelog stays in English.)
