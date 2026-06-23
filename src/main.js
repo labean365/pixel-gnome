@@ -22,6 +22,7 @@ import {
   addPreviewCard,
   addPdfPreviewCard,
   updatePdfCardMeta,
+  setPdfCardSavings,
   updatePreviewCardResult,
   updatePreviewCardError,
   markPreviewCardExported,
@@ -316,6 +317,15 @@ if (bulkCombinePdfBtn && isPdfSupported()) {
 const bulkOptimizePdfBtn = document.getElementById('bulkOptimizePdfBtn');
 if (bulkOptimizePdfBtn && isPdfSupported()) {
   bulkOptimizePdfBtn.addEventListener('click', () => handleBulkOptimizePdf());
+}
+
+// Recipes are PDF-aware (H2): settings.js applies the recipe to the image
+// pipeline; this runs the PDF-side equivalent so a recipe isn't a no-op when the
+// workspace holds PDFs. Both listeners fire independently on the same chip.
+if (isPdfSupported()) {
+  document.querySelectorAll('[data-recipe]').forEach((chip) => {
+    chip.addEventListener('click', () => handleRecipeForPdfs(chip.dataset.recipe));
+  });
 }
 
 initHistory();
@@ -1121,6 +1131,11 @@ function addPdfCard(file) {
             });
         },
       });
+    },
+    (cardId) => {
+      // Per-card Download — saves the card's current (possibly edited/optimized) PDF (H4).
+      const current = pdfQueue.get(cardId);
+      if (current) downloadBlob(current.file, current.file.name);
     }
   );
   announce(t('announce.pdfAdded', { name: file.name }));
@@ -2329,37 +2344,62 @@ async function handleBulkOptimizePdf() {
     showToast(t('toast.noneSelected'), 'warning', 2000);
     return;
   }
+  await optimizePdfItems(pdfs);
+}
+
+// Guards against overlapping PDF-optimize runs (bulk toolbar + Compress recipe
+// both drive optimizePdfItems).
+let pdfOptimizeBusy = false;
+
+/**
+ * Optimize a set of PDF cards in place, sequentially: swap each card's file when
+ * the engine actually beats it, refresh its meta + savings line (H4), and report
+ * a summary. Shared by the bulk "Optimize PDFs" button and the PDF-aware recipes
+ * (H2). `options` is forwarded to optimizePdfBlob (e.g. a lower imageQuality for
+ * the Email-safe recipe).
+ * @param {{ id: string, item: { id: string, file: File, pdfMeta: object|null } }[]} items
+ * @param {object} [options]
+ */
+async function optimizePdfItems(items, options = {}) {
+  if (pdfOptimizeBusy || items.length === 0) return;
+  pdfOptimizeBusy = true;
 
   let before = 0;
   let after = 0;
   let optimized = 0;
   let failed = 0;
-  announce(t('bulk.optimizeStart', { count: pdfs.length }));
+  announce(t('bulk.optimizeStart', { count: items.length }));
 
-  for (let i = 0; i < pdfs.length; i++) {
-    const e = pdfs[i];
-    showToast(t('bulk.optimizingN', { done: i + 1, total: pdfs.length }), 'info', 2500);
-    try {
-      const r = await optimizePdfBlob(e.item.file);
-      before += r.before;
-      after += r.after;
-      // Only swap the card's file when the engine actually produced a smaller one.
-      if (r.after < r.before) {
-        const newFile = new File([r.blob], e.item.file.name, { type: 'application/pdf' });
-        e.item.file = newFile;
-        try {
-          const meta = await getPdfCardMeta(newFile);
-          e.item.pdfMeta = meta;
-          updatePdfCardMeta(e.id, meta);
-        } catch {
-          /* file already updated; keep existing card meta if re-read fails */
+  try {
+    for (let i = 0; i < items.length; i++) {
+      const e = items[i];
+      showToast(t('bulk.optimizingN', { done: i + 1, total: items.length }), 'info', 2500);
+      try {
+        const r = await optimizePdfBlob(e.item.file, options);
+        before += r.before;
+        after += r.after;
+        // Only swap the card's file when the engine actually produced a smaller one.
+        if (r.after < r.before) {
+          const newFile = new File([r.blob], e.item.file.name, { type: 'application/pdf' });
+          e.item.file = newFile;
+          try {
+            const meta = await getPdfCardMeta(newFile);
+            e.item.pdfMeta = meta;
+            updatePdfCardMeta(e.id, meta);
+          } catch {
+            /* file already updated; keep existing card meta if re-read fails */
+          }
+          // Show the before→after savings on the card, mirroring image cards (H4).
+          setPdfCardSavings(e.id, r.before, r.after);
+          optimized++;
         }
-        optimized++;
+      } catch (err) {
+        failed++;
+        console.error('PixelGnome: PDF optimize failed:', err);
       }
-    } catch (err) {
-      failed++;
-      console.error('PixelGnome: PDF optimize failed:', err);
     }
+  } finally {
+    pdfOptimizeBusy = false;
   }
 
   if (optimized > 0) {
@@ -2370,6 +2410,33 @@ async function handleBulkOptimizePdf() {
     showToast(t('bulk.optimizeFailed'), 'error', 5000);
   } else {
     showToast(t('pdf.noReduction'), 'info', 4000);
+  }
+}
+
+/**
+ * Make the Step-2 recipes act on PDFs too (H2). Recipes set the image pipeline in
+ * settings.js; this runs the PDF-side equivalent so a recipe isn't a silent no-op
+ * when PDFs are present. Targets the selected PDFs, or all PDFs when none are
+ * selected. Images are untouched here (settings.js handles them).
+ * @param {'compress'|'email-safe'|'convert'} recipe
+ */
+function handleRecipeForPdfs(recipe) {
+  if (!isPdfSupported() || pdfQueue.size === 0) return;
+  const selectedPdfs = selectedInDomOrder().filter((e) => e.kind === 'pdf');
+  const targets = selectedPdfs.length
+    ? selectedPdfs
+    : [...pdfQueue.entries()].map(([id, item]) => ({ id, kind: 'pdf', item }));
+  if (targets.length === 0) return;
+
+  if (recipe === 'compress') {
+    optimizePdfItems(targets);
+  } else if (recipe === 'email-safe') {
+    // Match the PDF Email preset (more aggressive image recompression).
+    optimizePdfItems(targets, { imageQuality: 0.5 });
+  } else if (recipe === 'convert') {
+    // Format conversion for a PDF is per-file (PDF → images) and lives in the
+    // drill-in, so route the user there rather than acting silently.
+    showToast(t('recipe.pdfConvertHint'), 'info', 5000);
   }
 }
 

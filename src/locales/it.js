@@ -92,6 +92,7 @@ export default {
     errorNotPdf: '“{name}” non è un file PDF valido.',
     errorEmpty: 'Questo PDF non ha pagine.',
     modeAria: 'Scegli cosa fare con questo PDF',
+    toolsHeading: 'Crea un nuovo file',
     mode: { compress: 'Comprimi', organize: 'Organizza', merge: 'Unisci', toImages: 'In immagini' },
     org: {
       operation: 'Operazione',
@@ -186,6 +187,7 @@ export default {
     emailSafeTitle: 'Ridimensiona e comprimi a una dimensione piccola e compatibile per l’email',
     convert: 'Converti formato',
     convertTitle: 'Cambia il formato del file senza ridimensionare — scegli un formato sotto',
+    pdfConvertHint: 'Per convertire un PDF, aprilo e usa “In immagini”.',
   },
 
   preset: {

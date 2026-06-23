@@ -293,8 +293,9 @@ export async function addPreviewCard(id, file, onRemove, onDownload, editCallbac
  * @param {File} file
  * @param {function(string): void} onRemove
  * @param {function(string): void} onOpen - opens the PDF (interim: the modal)
+ * @param {function(string): void} [onDownload] - downloads the card's current PDF (H4)
  */
-export function addPdfPreviewCard(id, file, onRemove, onOpen) {
+export function addPdfPreviewCard(id, file, onRemove, onOpen, onDownload) {
   showPreviewArea();
 
   const card = document.createElement('div');
@@ -324,6 +325,8 @@ export function addPdfPreviewCard(id, file, onRemove, onOpen) {
       </div>
       <div class="preview-card-stats">
         <div class="pdf-meta-line" id="pdfmeta-${id}">${escapeHtml(t('card.pdfPagesLoading'))} &middot; ${formatBytes(file.size)}</div>
+        <!-- Savings line, shown after an in-place optimize (H4 — parity with image cards) -->
+        <div class="stat-savings-row" id="pdfsavings-${id}" hidden></div>
       </div>
       <div class="edit-toolbar">
         <button class="btn-edit" data-action="open-pdf" data-tooltip="${t('card.editPagesTitle')}" title="${t('card.editPagesTitle')}" aria-label="${t('card.editPagesTitle')}">
@@ -333,6 +336,13 @@ export function addPdfPreviewCard(id, file, onRemove, onOpen) {
       </div>
     </div>
     <div class="preview-card-actions">
+      <button class="btn btn-icon" data-action="download-pdf" data-tooltip="${t('card.downloadTip')}" title="${t('card.downloadTitle')}" aria-label="${escapeAttr(t('card.downloadAria', { name: file.name }))}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </button>
       <button class="btn btn-icon btn-danger" data-action="remove" data-tooltip="${t('card.removeTip')}" title="${t('card.removeTitle')}" aria-label="${escapeAttr(t('card.removeAria', { name: file.name }))}">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/>
@@ -346,6 +356,8 @@ export function addPdfPreviewCard(id, file, onRemove, onOpen) {
   card
     .querySelectorAll('[data-action="open-pdf"]')
     .forEach((el) => el.addEventListener('click', () => onOpen(id)));
+  const dlBtn = card.querySelector('[data-action="download-pdf"]');
+  if (dlBtn && onDownload) dlBtn.addEventListener('click', () => onDownload(id));
 
   previewList().appendChild(card);
 }
@@ -383,6 +395,31 @@ export function updatePdfCardMeta(id, meta) {
       img.alt = t('card.pdfThumbAlt');
       thumb.insertBefore(img, thumb.firstChild);
     }
+  }
+}
+
+/**
+ * Show a before→after savings line on a PDF card after an in-place optimize, so a
+ * PDF card reads as alive as an image card (H4). Reuses the image card's savings
+ * styling. Hides itself when there was no reduction.
+ * @param {string} id
+ * @param {number} before  byte size before optimize
+ * @param {number} after   byte size after optimize
+ */
+export function setPdfCardSavings(id, before, after) {
+  const el = document.getElementById(`pdfsavings-${id}`);
+  if (!el) return;
+  if (before && after < before) {
+    const saved = before - after;
+    const pct = Math.round((saved / before) * 100);
+    el.innerHTML = `
+      <span class="stat-savings-label">${t('card.saved')}</span>
+      <span class="stat-savings-value">&minus;${formatBytes(saved)} (&minus;${pct}%)</span>
+    `;
+    el.className = 'stat-savings-row';
+    el.hidden = false;
+  } else {
+    el.hidden = true;
   }
 }
 

@@ -90,6 +90,7 @@ export default {
     errorNotPdf: '“{name}” isn’t a valid PDF file.',
     errorEmpty: 'This PDF has no pages.',
     modeAria: 'Choose what to do with this PDF',
+    toolsHeading: 'Create a new file',
     mode: { compress: 'Compress', organize: 'Organize', merge: 'Merge', toImages: 'To Images' },
     org: {
       operation: 'Operation',
@@ -180,6 +181,7 @@ export default {
     emailSafeTitle: 'Resize and compress to a small, widely-compatible size for email',
     convert: 'Convert format',
     convertTitle: 'Change the file format without resizing — pick a format below',
+    pdfConvertHint: 'To convert a PDF, open it and use “To Images”.',
   },
 
   preset: {

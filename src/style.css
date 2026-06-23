@@ -3644,6 +3644,16 @@ fieldset.setting-group legend.setting-label {
   flex: 1;
 }
 
+/* Section label separating the "create a new file" tools from the page edits (H3). */
+.pdf-tools-heading {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-sm);
+}
+
 .pdf-panel {
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
@@ -3689,6 +3699,7 @@ fieldset.setting-group legend.setting-label {
 .pdf-edit-bar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap; /* H5 — preflight text + Reset/Export/Apply wrap on narrow widths */
   gap: var(--space-sm);
   padding-top: var(--space-sm);
   border-top: 1px solid var(--color-border-light);
@@ -3697,6 +3708,29 @@ fieldset.setting-group legend.setting-label {
 .pdf-preflight {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
+}
+
+/* Drill-in on phones (H5): tighter padding, comfortable tap targets on the
+   selection + edit toolbars, and the flex spacers/auto-margins (which assume a
+   single wide row) are neutralized so the controls wrap and flow naturally. */
+@media (max-width: 768px) {
+  .pdf-modal-body {
+    padding: var(--space-md);
+  }
+
+  .pdf-select-toolbar .btn.btn-sm,
+  .pdf-edit-bar .btn.btn-sm {
+    min-height: 40px;
+  }
+
+  .pdf-select-toolbar .pdf-toolbar-spacer,
+  .pdf-edit-bar .pdf-toolbar-spacer {
+    display: none;
+  }
+
+  .pdf-select-count {
+    margin-left: 0;
+  }
 }
 
 .pdf-info {
@@ -4024,7 +4058,8 @@ fieldset.setting-group legend.setting-label {
 .pdf-select-toolbar {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  flex-wrap: wrap; /* H5 — the 7 controls (select/clear/count + rotate/delete/extract/remove) wrap on narrow widths instead of overflowing */
+  gap: var(--space-sm) var(--space-md);
   font-size: var(--text-sm);
 }
 

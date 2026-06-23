@@ -17,6 +17,7 @@
 import { createDefaultEdits } from './editor.js';
 import { createColorController } from './crop-colors.js';
 import { createHistoryController } from './crop-history.js';
+import { createFocusTrap } from './shared/focus-trap.js';
 import { t } from './i18n.js';
 import {
   buildTransformedCanvas as engineBuildTransformedCanvas,
@@ -30,6 +31,7 @@ import {
 } from './crop-engine.js';
 
 let modalEl = null;
+let focusTrap = null; // keeps Tab within the modal; restores focus on close (H6)
 let overlayCanvas = null;
 let overlayCtx = null;
 let sourceImg = null;
@@ -656,6 +658,9 @@ function createModalDOM() {
 
   // Focus the apply button
   modalEl.querySelector('[data-action="apply"]').focus();
+  // Trap Tab within the modal; restore focus to the opener on close (H6).
+  focusTrap = createFocusTrap(modalEl);
+  focusTrap.activate();
 }
 
 function loadSourceImage(src) {
@@ -1171,6 +1176,10 @@ function closeModal() {
   window.removeEventListener('resize', onResize);
   document.removeEventListener('keydown', onKeyDown);
   document.removeEventListener('keyup', onKeyUp);
+  if (focusTrap) {
+    focusTrap.release(); // restores focus to the opener
+    focusTrap = null;
+  }
   shiftHeld = false;
   lockedAspectRatio = null;
   exportSize = null;

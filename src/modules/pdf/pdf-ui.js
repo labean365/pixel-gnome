@@ -30,6 +30,7 @@ import JSZip from 'jszip';
 import { t } from '../i18n.js';
 import { showToast } from '../toast.js';
 import { announce } from '../announcer.js';
+import { createFocusTrap } from '../shared/focus-trap.js';
 import { trackUrl, revokeUrl } from '../resource-tracker.js';
 import { trackPdfOptimized, trackPdfOrganized, trackPdfRasterized } from '../analytics.js';
 
@@ -108,8 +109,10 @@ const thumbCache = new Map(); // origIndex → thumbnail URL (survives grid rebu
 // Edit model (C2): pending page edits, baked into bytes only on Apply/Export.
 let pageOrder = []; // original page indices in display order (deletes drop them)
 const rotations = new Map(); // origIndex → degrees (90/180/270); 0 ⇒ absent
+let editSeq = 0; // bumps on any page-content edit (reorder/rotate/delete) — busts the raster cache so To-Images re-renders the edited document (H1)
 let dragSrcPage = null; // origIndex being dragged (reorder)
 let onApplyHandler = null; // called with the edited File so the card can persist
+let focusTrap = null; // keeps Tab within the dialog; restores focus on close (H6)
 
 // To-Images (rasterize) state.
 let rasterFormat = 'png'; // 'png' | 'jpeg'
@@ -261,6 +264,7 @@ export async function openPdfModal(file, opts = {}) {
   resultBytes = null;
   selectedPages.clear();
   rotations.clear();
+  editSeq = 0;
   pageOrder = [];
   thumbCache.clear();
   dragSrcPage = null;
@@ -488,7 +492,10 @@ function renderShell() {
 
         <div class="pdf-page-grid" id="pdfPageGrid"></div>
 
-        <!-- Secondary actions as collapsible panels -->
+        <!-- Tools: each produces a NEW file from this PDF (distinct from the page
+             edits above, which change the document itself). Mutually exclusive (H3). -->
+        <div class="pdf-tools-heading">${t('pdf.toolsHeading')}</div>
+
         <details class="pdf-panel" id="pdfPanelCompress">
           <summary>${t('pdf.mode.compress')}</summary>
           <div class="pdf-panel-body">
@@ -598,6 +605,10 @@ function renderShell() {
   document.body.appendChild(backdrop);
   wireEvents();
   backdrop.querySelector('[data-action="close"]').focus();
+  // Trap Tab within the dialog and restore focus to the opener (the card's
+  // "Edit pages" button) on close (H6).
+  focusTrap = createFocusTrap(backdrop);
+  focusTrap.activate();
 }
 
 function renderInfo() {
@@ -709,6 +720,26 @@ function wireEvents() {
   }
   byId('pdfRasterZipBtn').addEventListener('click', runRasterZip);
   byId('pdfRasterEditorBtn').addEventListener('click', runRasterToEditor);
+
+  // --- Tools accordion (H3) ---
+  // The Compress / Split / To-Images panels are mutually exclusive: opening one
+  // closes the others, and any change in which tool is open clears the previous
+  // tool's result + status. This stops the old behaviour where a finished result
+  // (e.g. "17% smaller" + a Download) lingered, orphaned, after its panel was
+  // collapsed or another tool was opened — so only the active tool's output is
+  // ever on screen. `toggle` doesn't bubble, so the nested Advanced <details>
+  // inside Compress won't trip this.
+  const panels = Array.from(backdrop.querySelectorAll('.pdf-panel'));
+  panels.forEach((panel) => {
+    panel.addEventListener('toggle', () => {
+      if (busy) return; // don't yank a result out from under an in-flight op
+      if (panel.open) {
+        for (const other of panels) if (other !== panel) other.open = false;
+      }
+      hideDownload();
+      setStatus('');
+    });
+  });
 }
 
 function onKeyDown(e) {
@@ -809,6 +840,7 @@ function movePage(src, target) {
   pageOrder.splice(from, 1);
   const to = pageOrder.indexOf(target);
   pageOrder.splice(to < 0 ? pageOrder.length : to, 0, src);
+  editSeq++;
   hideDownload();
   buildPageGrid();
 }
@@ -867,6 +899,7 @@ function rotateSelected(dir) {
     const stage = backdrop?.querySelector(`.pdf-thumb[data-page="${orig}"] .pdf-thumb-stage`);
     if (stage) stage.style.transform = next ? `rotate(${next}deg)` : '';
   }
+  editSeq++;
   hideDownload();
   updateEditBar();
 }
@@ -881,6 +914,7 @@ function deleteSelected() {
   pageOrder = pageOrder.filter((p) => !selectedPages.has(p));
   for (const p of selectedPages) rotations.delete(p);
   selectedPages.clear();
+  editSeq++;
   hideDownload();
   buildPageGrid();
 }
@@ -1005,6 +1039,7 @@ function resetEdits() {
   pageOrder = Array.from({ length: pdfInfo?.pageCount ?? 0 }, (_, i) => i);
   rotations.clear();
   selectedPages.clear();
+  editSeq++;
   hideDownload();
   buildPageGrid();
 }
@@ -1047,8 +1082,9 @@ async function extractSelected() {
     setStatus(t('pdf.org.errNoSelection'), 'error');
     return;
   }
-  // Preserve the current display order (respects pending reorder/delete).
-  const pages = pageOrder.filter((p) => selectedPages.has(p));
+  // Positions in the edited document, in display order — so rotations and
+  // reorder are honored in the extracted file (H1).
+  const pages = composedPositions((orig) => selectedPages.has(orig));
   await runSingle(pages, `${stem()}-extract.pdf`, 'extract');
 }
 
@@ -1063,19 +1099,23 @@ async function removeSelected() {
     setStatus(t('pdf.org.errRemoveAll'), 'error');
     return;
   }
-  // Keep the unselected pages in current display order.
-  const pages = pageOrder.filter((p) => !selectedPages.has(p));
+  // Keep the unselected pages, in edited display order (H1).
+  const pages = composedPositions((orig) => !selectedPages.has(orig));
   await runSingle(pages, `${stem()}-removed.pdf`, 'remove');
 }
 
-/** Shared runner for extract/remove (both produce one new PDF via pdf-extract). */
+/**
+ * Shared runner for extract/remove (both produce one new PDF via pdf-extract).
+ * `pages` are positions in the composed (edited) document — see composedPositions.
+ */
 async function runSingle(pages, name, op) {
   busy = true;
   setSelectionActionsDisabled(true);
   hideDownload();
   setStatus(t('pdf.org.building'), 'info', true);
   try {
-    const res = await call('pdf-extract', { bytes: srcBytes, pages });
+    const inputBytes = await composeEdited();
+    const res = await call('pdf-extract', { bytes: inputBytes, pages });
     const bytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes);
     finishSingleResult(bytes, name, pages.length);
     trackPdfOrganized({ op });
@@ -1090,7 +1130,8 @@ async function runSingle(pages, name, op) {
 /** Split the PDF into multiple files (every page, or custom ranges) → ZIP. */
 async function runSplit() {
   if (busy || !srcBytes || !pdfInfo) return;
-  const total = pdfInfo.pageCount;
+  // Split the EDITED document — page count and numbering follow the grid (H1).
+  const total = pageOrder.length;
   let ranges;
   try {
     const splitMode = byId('pdfSplitMode')?.value || 'each';
@@ -1111,7 +1152,8 @@ async function runSplit() {
   hideDownload();
   setStatus(t('pdf.org.building'), 'info', true);
   try {
-    const res = await call('pdf-split', { bytes: srcBytes, ranges });
+    const inputBytes = await composeEdited();
+    const res = await call('pdf-split', { bytes: inputBytes, ranges });
     await finishSplitResult(res.parts || [], ranges);
     trackPdfOrganized({ op: 'split' });
   } catch (err) {
@@ -1226,16 +1268,27 @@ function setRasterScope(scope) {
   hideDownload();
 }
 
-/** 0-based page indices To-Images should render (ascending), or null for all (D2). */
-function pagesForRaster() {
-  if (rasterScope !== 'selected' || selectedPages.size === 0) return null;
-  return [...selectedPages].sort((a, b) => a - b);
+/**
+ * Page positions in the COMPOSED document (the bytes returned by composeEdited,
+ * which are in pageOrder order) whose original page index satisfies `keep`.
+ * Returned ascending = display order. Used by every tool that runs on a page
+ * subset (extract / remove / To-Images "Selected") so those subsets line up with
+ * the edited document rather than the original (H1).
+ * @param {(origIndex: number) => boolean} keep
+ * @returns {number[]}
+ */
+function composedPositions(keep) {
+  const out = [];
+  pageOrder.forEach((orig, pos) => {
+    if (keep(orig)) out.push(pos);
+  });
+  return out;
 }
 
 /** How many pages To-Images will render under the current scope (D2). */
 function rasterTotal() {
-  const wanted = pagesForRaster();
-  return wanted ? wanted.length : (pdfInfo?.pageCount ?? 0);
+  if (rasterScope === 'selected' && selectedPages.size > 0) return selectedPages.size;
+  return pageOrder.length;
 }
 
 /** File extension + MIME for the current raster format. */
@@ -1253,22 +1306,28 @@ function rasterMime() {
  * even when only a subset (D2) is rendered.
  */
 async function renderRasterPages() {
-  const wanted = pagesForRaster(); // null = all pages
+  // Render the EDITED document; "Selected" maps to positions in that document so
+  // rotations / reorder / deletes are reflected in the images (H1).
+  const useSelected = rasterScope === 'selected' && selectedPages.size > 0;
+  const wanted = useSelected ? composedPositions((orig) => selectedPages.has(orig)) : null; // null = all
   const scopeKey = wanted ? `sel:${wanted.join('.')}` : 'all';
-  // Quality only affects JPEG output; fold it into the cache key only for JPEG so
-  // PNG renders still reuse the cache when the slider moves.
-  const key = `${rasterFormat}@${rasterDpi}${rasterFormat === 'jpeg' ? `@${rasterQuality}` : ''}@${scopeKey}`;
+  // editSeq folds page edits into the cache key (a rotate/reorder/delete busts it);
+  // quality only affects JPEG, so fold it in only for JPEG so PNG renders still
+  // reuse the cache when the slider moves.
+  const key = `e${editSeq}@${rasterFormat}@${rasterDpi}${rasterFormat === 'jpeg' ? `@${rasterQuality}` : ''}@${scopeKey}`;
   if (rasterCache && rasterCache.key === key) return rasterCache;
-  const total = wanted ? wanted.length : (pdfInfo?.pageCount ?? 0);
+  const total = wanted ? wanted.length : pageOrder.length;
+  const inputBytes = await composeEdited();
   const res = await call(
     'pdf-rasterize',
     {
-      bytes: srcBytes,
+      bytes: inputBytes,
       options: { format: rasterFormat, dpi: rasterDpi, quality: rasterQuality, pages: wanted },
     },
     (done) => setStatus(t('pdf.img2.rendering', { done, total }), 'info', true)
   );
   const pages = (res.pages || []).map((p) => (p instanceof Uint8Array ? p : new Uint8Array(p)));
+  // Filenames follow the edited document's display numbering (1-based position).
   const nums = wanted ? wanted.map((i) => i + 1) : pages.map((_, i) => i + 1);
   rasterCache = { key, pages, nums, format: rasterFormat };
   return rasterCache;
@@ -1363,15 +1422,20 @@ async function runOptimize() {
   setStatus(t('pdf.optimizing'), 'info', true);
 
   try {
+    // Compress the EDITED document (rotations / reorder / deletes baked in),
+    // not the original — so what the grid shows is what gets optimized (H1).
+    const inputBytes = await composeEdited();
     const res = await call(
       'pdf-optimize',
-      { bytes: srcBytes, options: readOptions() },
+      { bytes: inputBytes, options: readOptions() },
       (done, total) => {
         if (total > 0) setStatus(t('pdf.progress', { done, total }), 'info', true);
       }
     );
     resultBytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes);
-    finishResult(res.outputSize ?? resultBytes.length);
+    // Measure savings against the edited input, not the original file — otherwise
+    // deleting pages would be miscredited to compression.
+    finishResult(res.outputSize ?? resultBytes.length, inputBytes.length);
   } catch (err) {
     setStatus(err?.message || t('pdf.errorGeneric'), 'error');
   } finally {
@@ -1380,8 +1444,8 @@ async function runOptimize() {
   }
 }
 
-function finishResult(outSize) {
-  const inSize = pdfInfo?.fileSize ?? srcFile.size;
+function finishResult(outSize, inSizeOverride) {
+  const inSize = inSizeOverride ?? pdfInfo?.fileSize ?? srcFile.size;
   const noGain = outSize >= inSize;
 
   if (noGain) {
@@ -1406,6 +1470,10 @@ function finishResult(outSize) {
 
 function closePdfModal() {
   document.removeEventListener('keydown', onKeyDown);
+  if (focusTrap) {
+    focusTrap.release(); // restores focus to the opener
+    focusTrap = null;
+  }
   // Settle any in-flight worker jobs so their awaits don't dangle.
   for (const [, job] of pending) job.reject(new Error('closed'));
   pending.clear();
