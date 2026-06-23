@@ -1,0 +1,17 @@
+v0.29.0 — PDF page-range export + batch optimize (Tier D)
+
+D2 — page-range in To Images:
+- new All pages / Selected (N) toggle drives rasterizing from the drill-in grid
+- output filenames keep original page numbers; cache + progress scoped to subset
+- engine: pdfToImages gains optional `pages` array (backward compatible)
+
+D6 — batch optimize selected PDFs:
+- bulk-toolbar "Optimize PDFs" (shown only when the selection contains a PDF)
+- optimizes each selected PDF in place, sequentially, with progress + savings toast
+- reuses the pdf-optimize op via new headless optimizePdfBlob(); engine unchanged
+
+D3 (per-file merge page selection) deferred — its old in-modal Merge tab was
+removed in Tier C; swapped in D6 instead.
+
+verify green (lint 0 errors, format, build:all, check:pdf on dist + dist-single);
+engine harness extended with a pdfToImages-subset check.

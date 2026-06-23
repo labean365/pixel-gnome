@@ -115,7 +115,8 @@ let onApplyHandler = null; // called with the edited File so the card can persis
 let rasterFormat = 'png'; // 'png' | 'jpeg'
 let rasterDpi = 150; // 96 (screen) | 150 (standard) | 300 (print)
 let rasterQuality = 0.85; // JPEG quality (0–1); ignored for PNG (D1)
-let rasterCache = null; // { key, pages:[Uint8Array], format } — last render, reused
+let rasterScope = 'all'; // 'all' | 'selected' — which pages To-Images renders (D2)
+let rasterCache = null; // { key, pages:[Uint8Array], nums:number[], format } — last render
 
 // Registered by main.js so "Send to editor" can hand page images to the queue
 // (set via setImageImportHandler — avoids a circular import).
@@ -266,6 +267,7 @@ export async function openPdfModal(file, opts = {}) {
   rasterFormat = 'png';
   rasterDpi = 150;
   rasterQuality = 0.85;
+  rasterScope = 'all';
   rasterCache = null;
 
   renderShell();
@@ -336,6 +338,35 @@ export async function mergePdfBlobs(pdfBlobs) {
   const res = await call('pdf-merge', { docs });
   const bytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes);
   return new Blob([bytes], { type: 'application/pdf' });
+}
+
+// Default structural-optimize options, matching the modal's Advanced defaults —
+// used by the headless batch-optimize helper (D6) so a bulk run behaves like the
+// in-modal "Compress" with the default preset.
+const DEFAULT_OPTIMIZE = {
+  imageQuality: PRESETS[DEFAULT_PRESET],
+  recompressImages: true,
+  stripMetadata: true,
+  subsetFonts: true,
+  garbageCollect: true,
+};
+
+/**
+ * Optimize one PDF Blob headlessly (D6 batch optimize), driving the same
+ * `pdf-optimize` worker op as the modal's Compress. The engine returns the
+ * original bytes if it can't beat them, so `after <= before` always holds.
+ * @param {Blob} blob  the source PDF.
+ * @param {object} [options]  overrides merged over DEFAULT_OPTIMIZE.
+ * @returns {Promise<{ blob: Blob, before: number, after: number }>}
+ */
+export async function optimizePdfBlob(blob, options = {}) {
+  if (!isPdfSupported()) throw new Error(t('pdf.errorUnsupported'));
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const before = bytes.length;
+  const res = await call('pdf-optimize', { bytes, options: { ...DEFAULT_OPTIMIZE, ...options } });
+  const out = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes);
+  const after = res.outputSize ?? out.length;
+  return { blob: new Blob([out], { type: 'application/pdf' }), before, after };
 }
 
 /**
@@ -533,6 +564,13 @@ function renderShell() {
               <input type="range" id="pdfRasterQuality" min="10" max="100" step="1" value="85" aria-label="${t('pdf.quality')}">
               <output id="pdfRasterQualityOut">85</output>
             </div>
+            <div class="pdf-op-row">
+              <span>${t('pdf.img2.pages')}</span>
+              <div class="pdf-presets" role="group" aria-label="${t('pdf.img2.pages')}">
+                <button class="pdf-preset active" data-raster-scope="all">${t('pdf.img2.scopeAll')}</button>
+                <button class="pdf-preset" data-raster-scope="selected" id="pdfRasterScopeSelected" disabled>${t('pdf.img2.scopeSelected', { count: 0 })}</button>
+              </div>
+            </div>
             <div class="pdf-actions">
               <button class="btn btn-primary" data-action="raster-zip" id="pdfRasterZipBtn">${t('pdf.img2.downloadZip')}</button>
               <button class="btn btn-secondary" data-action="raster-editor" id="pdfRasterEditorBtn">${t('pdf.img2.sendToEditor')}</button>
@@ -656,6 +694,9 @@ function wireEvents() {
   });
   backdrop.querySelectorAll('[data-raster-dpi]').forEach((btn) => {
     btn.addEventListener('click', () => setRasterDpi(Number(btn.dataset.rasterDpi)));
+  });
+  backdrop.querySelectorAll('[data-raster-scope]').forEach((btn) => {
+    btn.addEventListener('click', () => setRasterScope(btn.dataset.rasterScope));
   });
   const rasterQ = byId('pdfRasterQuality');
   if (rasterQ) {
@@ -850,6 +891,15 @@ function updateSelectionUI() {
   const n = selectedPages.size;
   if (countEl) countEl.textContent = t('pdf.org.selectedCount', { count: n });
   if (!busy) setSelectionActionsDisabled(false);
+
+  // Keep the To-Images "Selected (N)" scope button in sync with the selection.
+  const selBtn = byId('pdfRasterScopeSelected');
+  if (selBtn) {
+    selBtn.textContent = t('pdf.img2.scopeSelected', { count: n });
+    selBtn.disabled = n === 0;
+    // If the selection is cleared while "Selected" was active, fall back to All.
+    if (n === 0 && rasterScope === 'selected') setRasterScope('all');
+  }
 }
 
 /** Enable/disable selection actions (rotate / delete / extract / remove). */
@@ -1166,6 +1216,28 @@ function setRasterDpi(dpi) {
   hideDownload();
 }
 
+/** Choose All vs Selected pages for To-Images (D2). 'selected' needs a selection. */
+function setRasterScope(scope) {
+  const next = scope === 'selected' && selectedPages.size > 0 ? 'selected' : 'all';
+  rasterScope = next;
+  backdrop.querySelectorAll('[data-raster-scope]').forEach((b) => {
+    b.classList.toggle('active', b.dataset.rasterScope === rasterScope);
+  });
+  hideDownload();
+}
+
+/** 0-based page indices To-Images should render (ascending), or null for all (D2). */
+function pagesForRaster() {
+  if (rasterScope !== 'selected' || selectedPages.size === 0) return null;
+  return [...selectedPages].sort((a, b) => a - b);
+}
+
+/** How many pages To-Images will render under the current scope (D2). */
+function rasterTotal() {
+  const wanted = pagesForRaster();
+  return wanted ? wanted.length : (pdfInfo?.pageCount ?? 0);
+}
+
 /** File extension + MIME for the current raster format. */
 function rasterExt() {
   return rasterFormat === 'jpeg' ? 'jpg' : 'png';
@@ -1175,23 +1247,31 @@ function rasterMime() {
 }
 
 /**
- * Render every page to images at the current format/DPI, reusing the last render
- * if format+DPI are unchanged. Returns an array of Uint8Array page images.
+ * Render pages to images at the current format/DPI/scope, reusing the last render
+ * if nothing relevant changed. Returns `{ pages, nums }` — image bytes plus the
+ * 1-based source page number of each, so filenames keep the original numbering
+ * even when only a subset (D2) is rendered.
  */
 async function renderRasterPages() {
+  const wanted = pagesForRaster(); // null = all pages
+  const scopeKey = wanted ? `sel:${wanted.join('.')}` : 'all';
   // Quality only affects JPEG output; fold it into the cache key only for JPEG so
   // PNG renders still reuse the cache when the slider moves.
-  const key = `${rasterFormat}@${rasterDpi}${rasterFormat === 'jpeg' ? `@${rasterQuality}` : ''}`;
-  if (rasterCache && rasterCache.key === key) return rasterCache.pages;
-  const total = pdfInfo?.pageCount ?? 0;
+  const key = `${rasterFormat}@${rasterDpi}${rasterFormat === 'jpeg' ? `@${rasterQuality}` : ''}@${scopeKey}`;
+  if (rasterCache && rasterCache.key === key) return rasterCache;
+  const total = wanted ? wanted.length : (pdfInfo?.pageCount ?? 0);
   const res = await call(
     'pdf-rasterize',
-    { bytes: srcBytes, options: { format: rasterFormat, dpi: rasterDpi, quality: rasterQuality } },
+    {
+      bytes: srcBytes,
+      options: { format: rasterFormat, dpi: rasterDpi, quality: rasterQuality, pages: wanted },
+    },
     (done) => setStatus(t('pdf.img2.rendering', { done, total }), 'info', true)
   );
   const pages = (res.pages || []).map((p) => (p instanceof Uint8Array ? p : new Uint8Array(p)));
-  rasterCache = { key, pages, format: rasterFormat };
-  return pages;
+  const nums = wanted ? wanted.map((i) => i + 1) : pages.map((_, i) => i + 1);
+  rasterCache = { key, pages, nums, format: rasterFormat };
+  return rasterCache;
 }
 
 async function runRasterZip() {
@@ -1199,15 +1279,15 @@ async function runRasterZip() {
   busy = true;
   setRasterButtonsDisabled(true);
   hideDownload();
-  setStatus(t('pdf.img2.rendering', { done: 0, total: pdfInfo.pageCount }), 'info', true);
+  setStatus(t('pdf.img2.rendering', { done: 0, total: rasterTotal() }), 'info', true);
   try {
-    const pages = await renderRasterPages();
+    const { pages, nums } = await renderRasterPages();
     setStatus(t('pdf.img2.zipping'), 'info', true);
     const zip = new JSZip();
     const ext = rasterExt();
-    const pad = String(pages.length).length;
+    const pad = String(pdfInfo.pageCount).length;
     pages.forEach((bytes, i) => {
-      zip.file(`${stem()}-p${String(i + 1).padStart(pad, '0')}.${ext}`, bytes);
+      zip.file(`${stem()}-p${String(nums[i]).padStart(pad, '0')}.${ext}`, bytes);
     });
     const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
     setStatus(t('pdf.img2.done', { count: pages.length }), 'success');
@@ -1231,16 +1311,16 @@ async function runRasterToEditor() {
   busy = true;
   setRasterButtonsDisabled(true);
   hideDownload();
-  setStatus(t('pdf.img2.rendering', { done: 0, total: pdfInfo.pageCount }), 'info', true);
+  setStatus(t('pdf.img2.rendering', { done: 0, total: rasterTotal() }), 'info', true);
   try {
-    const pages = await renderRasterPages();
+    const { pages, nums } = await renderRasterPages();
     const ext = rasterExt();
     const mime = rasterMime();
     const base = stem();
-    const pad = String(pages.length).length;
+    const pad = String(pdfInfo.pageCount).length;
     const files = pages.map(
       (bytes, i) =>
-        new File([bytes], `${base}-p${String(i + 1).padStart(pad, '0')}.${ext}`, { type: mime })
+        new File([bytes], `${base}-p${String(nums[i]).padStart(pad, '0')}.${ext}`, { type: mime })
     );
     const count = files.length;
     trackPdfRasterized({ format: rasterFormat, dpi: rasterDpi });

@@ -8,6 +8,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.29.0] — 2026-06-22
+
+### PDF page-range export + batch optimize (Tier D)
+
+Two PDF workflow features that build on the unified workspace.
+
+#### Added
+
+- **Page-range in "To Images" (D2).** The drill-in's page grid now drives rasterizing: a new **All pages / Selected (N)** toggle in To Images lets you render just the pages you select in the grid (instead of always all of them). Output filenames keep the original page numbers. Selecting "Selected" needs a grid selection; clearing it falls back to All.
+- **Batch optimize selected PDFs (D6).** With 2+ cards in the workspace, selecting one or more PDFs reveals an **Optimize PDFs** button in the bulk toolbar. It compresses each selected PDF in place (same structural optimization as the in-modal Compress — recompress images, strip bloat, keep text selectable), one at a time with progress, and reports the total space saved. PDFs that can't be made smaller are left untouched.
+
 ## [v0.28.1] — 2026-06-22
 
 ### PDF robustness + privacy copy (hardening)

@@ -449,6 +449,8 @@ export async function imagesToPdf(images) {
  * @property {'png'|'jpeg'} [format='png']  Output image format per page.
  * @property {number} [dpi=150]   Render resolution; scale = dpi/72.
  * @property {number} [quality=0.85]  0–1 JPEG quality (ignored for PNG).
+ * @property {number[]} [pages]   Optional 0-based page indices to render, in the
+ *   given order. Omitted / empty ⇒ every page. Out-of-range indices are dropped.
  * @property {(done:number,total:number)=>void} [onProgress]  Per-page progress.
  */
 
@@ -464,21 +466,27 @@ export async function imagesToPdf(images) {
  */
 export async function pdfToImages(bytes, options = {}) {
   assertBytes(bytes, 'pdfToImages');
-  const { format = 'png', dpi = 150, quality = 0.85, onProgress } = options;
+  const { format = 'png', dpi = 150, quality = 0.85, pages = null, onProgress } = options;
   const mupdf = await loadEngine();
   const pdf = openPdf(mupdf, bytes);
   const total = pdf.countPages();
+  // Optional subset (D2): render only the requested 0-based indices, in order.
+  // Null/empty ⇒ all pages; out-of-range indices are dropped defensively.
+  const indices =
+    Array.isArray(pages) && pages.length
+      ? pages.filter((i) => Number.isInteger(i) && i >= 0 && i < total)
+      : Array.from({ length: total }, (_, i) => i);
   const scale = Math.max(0.1, dpi / 72);
   const jpegQuality = Math.round(Math.min(1, Math.max(0.1, quality)) * 100);
   const matrix = mupdf.Matrix.scale(scale, scale);
 
   const out = [];
-  for (let i = 0; i < total; i++) {
-    const page = pdf.loadPage(i);
+  for (let k = 0; k < indices.length; k++) {
+    const page = pdf.loadPage(indices[k]);
     // Opaque RGB (alpha=false): PDF pages render onto white, no transparency.
     const pix = page.toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, false);
     out.push(format === 'jpeg' ? pix.asJPEG(jpegQuality, false) : pix.asPNG());
-    if (onProgress) onProgress(i + 1, total);
+    if (onProgress) onProgress(k + 1, indices.length);
   }
   return out;
 }

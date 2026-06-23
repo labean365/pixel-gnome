@@ -61,6 +61,7 @@ import {
   isPdfSupported,
   imagesToPdfBlob,
   combineMixedToPdf,
+  optimizePdfBlob,
   setImageImportHandler,
   getPdfCardMeta,
 } from './modules/pdf/pdf-ui.js';
@@ -308,6 +309,13 @@ const bulkCombinePdfBtn = document.getElementById('bulkCombinePdfBtn');
 if (bulkCombinePdfBtn && isPdfSupported()) {
   bulkCombinePdfBtn.hidden = false;
   bulkCombinePdfBtn.addEventListener('click', () => handleBulkCombinePdf());
+}
+
+// Bulk "Optimize PDFs" (D6) — also PDF-feature-gated. Unlike Combine, it's only
+// shown when the selection actually contains a PDF (toggled in renderSelectionState).
+const bulkOptimizePdfBtn = document.getElementById('bulkOptimizePdfBtn');
+if (bulkOptimizePdfBtn && isPdfSupported()) {
+  bulkOptimizePdfBtn.addEventListener('click', () => handleBulkOptimizePdf());
 }
 
 initHistory();
@@ -793,6 +801,12 @@ function renderSelectionState() {
   const blockEdits = counts.pdfs > 0;
   for (const btn of [bulkRotateCcwBtn, bulkRotateCwBtn, bulkFlipHBtn, bulkFlipVBtn]) {
     if (btn) btn.disabled = blockEdits;
+  }
+
+  // "Optimize PDFs" (D6) only makes sense for PDFs — show it only when the
+  // selection contains at least one (and the PDF feature is compiled in).
+  if (bulkOptimizePdfBtn) {
+    bulkOptimizePdfBtn.hidden = !(isPdfSupported() && counts.pdfs > 0);
   }
 }
 
@@ -2295,6 +2309,67 @@ async function handleBulkCombinePdf() {
     hideProgress();
     showToast(t('bulk.combineFailed', { message: err.message }), 'error');
     console.error('PixelGnome: Combine to PDF failed:', err);
+  }
+}
+
+/**
+ * Bulk "Optimize PDFs" (D6) — compress every selected PDF in place, one at a
+ * time, using the engine's default structural-optimize settings. Cards are
+ * updated to their smaller file (only when the engine actually beat the
+ * original); a summary toast reports how many shrank and the total savings.
+ * @returns {Promise<void>}
+ */
+async function handleBulkOptimizePdf() {
+  if (!isPdfSupported()) {
+    showToast(t('pdf.errorUnsupported'), 'error', 6000);
+    return;
+  }
+  const pdfs = selectedInDomOrder().filter((e) => e.kind === 'pdf');
+  if (pdfs.length === 0) {
+    showToast(t('toast.noneSelected'), 'warning', 2000);
+    return;
+  }
+
+  let before = 0;
+  let after = 0;
+  let optimized = 0;
+  let failed = 0;
+  announce(t('bulk.optimizeStart', { count: pdfs.length }));
+
+  for (let i = 0; i < pdfs.length; i++) {
+    const e = pdfs[i];
+    showToast(t('bulk.optimizingN', { done: i + 1, total: pdfs.length }), 'info', 2500);
+    try {
+      const r = await optimizePdfBlob(e.item.file);
+      before += r.before;
+      after += r.after;
+      // Only swap the card's file when the engine actually produced a smaller one.
+      if (r.after < r.before) {
+        const newFile = new File([r.blob], e.item.file.name, { type: 'application/pdf' });
+        e.item.file = newFile;
+        try {
+          const meta = await getPdfCardMeta(newFile);
+          e.item.pdfMeta = meta;
+          updatePdfCardMeta(e.id, meta);
+        } catch {
+          /* file already updated; keep existing card meta if re-read fails */
+        }
+        optimized++;
+      }
+    } catch (err) {
+      failed++;
+      console.error('PixelGnome: PDF optimize failed:', err);
+    }
+  }
+
+  if (optimized > 0) {
+    const pct = before > 0 ? Math.round((1 - after / before) * 100) : 0;
+    showToast(t('bulk.optimizeDone', { count: optimized, pct }), 'success', 5000);
+    announce(t('bulk.optimizeDone', { count: optimized, pct }));
+  } else if (failed > 0) {
+    showToast(t('bulk.optimizeFailed'), 'error', 5000);
+  } else {
+    showToast(t('pdf.noReduction'), 'info', 4000);
   }
 }
 

@@ -1300,6 +1300,33 @@
                   </svg>
                   <span data-i18n="bulk.combine">Combine to PDF</span>
                 </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="bulkOptimizePdfBtn"
+                  type="button"
+                  hidden
+                  data-tooltip="Compress the selected PDFs (recompress images, strip bloat; text stays selectable)"
+                  aria-label="Optimize selected PDFs"
+                  data-i18n-attr="data-tooltip:bulk.optimizeTip;aria-label:bulk.optimizeAria"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 14 10 14 10 20" />
+                    <polyline points="20 10 14 10 14 4" />
+                    <line x1="14" y1="10" x2="21" y2="3" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
+                  <span data-i18n="bulk.optimize">Optimize PDFs</span>
+                </button>
                 <span class="bulk-toolbar-sep" aria-hidden="true"></span>
                 <button
                   class="btn btn-danger btn-sm"
