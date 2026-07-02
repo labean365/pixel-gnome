@@ -38,6 +38,6 @@
   "dependencies": {
     "heic-to": "^1.4.2",
     "jszip": "^3.10.1",
-    "mupdf": "^1.27.0"
+    "mupdf": "^1.28.0"
   }
 }
