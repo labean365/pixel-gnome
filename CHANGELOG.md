@@ -8,6 +8,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.31.2] — 2026-10-08
+
+### Fixed
+
+- **SVG cards show the right original size (LAB-173 follow-up).** A percentage-sized SVG (e.g. `width="100%"` with a 640 × 320 viewBox) listed its original dimensions as **300 × 150** — Chrome's built-in default — even though it exported at the correct 640 × 320. The card now reads SVG dimensions from the same parser the export uses.
+
 ## [v0.31.1] — 2026-10-07
 
 ### SVG sizing, Italian number formatting & convert-only panel

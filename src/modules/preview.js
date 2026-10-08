@@ -6,7 +6,7 @@
  * Phase 6+: Color-coded stats, clickable thumbnails, high-visibility Edit button.
  */
 
-import { generateThumbnail } from './image-processor.js';
+import { generateThumbnail, isSvgFile, rasterizeSvg } from './image-processor.js';
 import { isGifFile, isAnimatedGif, countGifFrames } from './gif-detect.js';
 import { trackUrl, revokeUrl } from './resource-tracker.js';
 import { t, formatNumber } from './i18n.js';
@@ -792,7 +792,17 @@ export function removePreviewCard(id) {
 /**
  * Get image dimensions by loading it
  */
-function getImageDimensions(file) {
+async function getImageDimensions(file) {
+  // SVGs: the browser's naturalWidth is unreliable (Chrome reports its 300×150
+  // default for percentage-sized SVGs), so use the size rasterizeSvg() parsed
+  // from the markup — the same size the export uses.
+  if (isSvgFile(file)) {
+    const svgImg = await rasterizeSvg(file);
+    return {
+      width: svgImg._svgWidth || svgImg.naturalWidth,
+      height: svgImg._svgHeight || svgImg.naturalHeight,
+    };
+  }
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = trackUrl(URL.createObjectURL(file));

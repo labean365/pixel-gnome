@@ -1,0 +1,8 @@
+v0.31.2 — SVG card original-size fix
+
+LAB-173 follow-up: preview cards read SVG original dimensions from
+rasterizeSvg() (the same parser the export uses) instead of the browser's
+naturalWidth, which Chrome reports as 300x150 for percentage-sized SVGs.
+Display-only; export output was already correct in v0.31.1.
+
+verify green (lint 0 errors, format, build:all, check:pdf on dist + dist-single).

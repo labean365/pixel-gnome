@@ -9,6 +9,12 @@
 export function getChangelogContent() {
   return `
     <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.31.2 — SVG Card Fix</div>
+      <div class="help-changelog-items">
+        SVGs sized as a percentage now show their real original dimensions on the card, matching what they export at. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
       <div class="help-changelog-version">v0.31.1 — SVG Sizing &amp; Small Fixes</div>
       <div class="help-changelog-items">
         <strong>SVGs come out at the right size.</strong> Files sized in millimetres, inches or points (like Inkscape’s A4 exports), sized as a percentage, or with an unusual viewBox used to rasterize far too small or squashed into a square — they now keep their real dimensions and proportions. In Italian, file sizes and ratios use a decimal comma (<strong>1,84&nbsp;MB</strong>). The <strong>Original size</strong> preset and <strong>Convert</strong> recipe now hide the resize options that don’t apply, and a file that comes out the same size no longer reads “Larger +0&nbsp;B”. (This changelog stays in English.)
