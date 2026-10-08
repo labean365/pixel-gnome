@@ -77,6 +77,9 @@ export async function addPreviewCard(id, file, onRemove, onDownload, editCallbac
   // Alt+ArrowDown to reorder it. (Mouse drag-to-reorder was removed — it
   // conflicted with the full-window file-drop overlay.)
   card.setAttribute('tabindex', '0');
+  // Vector input: the raster output is always larger, so the card shows a
+  // neutral "Rasterized" row instead of a red "Larger +N%" (LAB-481).
+  if (isSvgFile(file)) card.dataset.vector = 'svg';
 
   // Detect animated GIFs before thumbnail generation
   let animated = false;
@@ -622,7 +625,15 @@ export function updatePreviewCardResult(id, result, updateThumb = false) {
   // Savings row
   const savingsEl = document.getElementById(`savings-${id}`);
   if (savingsEl) {
-    if (result.originalSize && result.outputSize < result.originalSize) {
+    if (card.dataset.vector) {
+      const fmt = rasterFormatLabel(result.blob && result.blob.type);
+      savingsEl.innerHTML = `
+        <span class="stat-neutral-label">${t('card.rasterized')}</span>
+        <span class="stat-neutral-value">SVG &rarr; ${fmt}</span>
+      `;
+      savingsEl.title = t('card.rasterizedTip');
+      savingsEl.hidden = false;
+    } else if (result.originalSize && result.outputSize < result.originalSize) {
       const saved = result.originalSize - result.outputSize;
       const pct = Math.round((saved / result.originalSize) * 100);
       savingsEl.innerHTML = `
@@ -816,6 +827,17 @@ async function getImageDimensions(file) {
     };
     img.src = url;
   });
+}
+
+/**
+ * Short display label for an output MIME type ("image/jpeg" → "JPG").
+ * @param {string} [mime]
+ * @returns {string}
+ */
+function rasterFormatLabel(mime) {
+  const sub = String(mime || '').split('/')[1] || '';
+  if (sub === 'jpeg') return 'JPG';
+  return sub ? sub.toUpperCase() : 'PNG';
 }
 
 /**

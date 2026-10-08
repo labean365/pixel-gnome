@@ -567,6 +567,9 @@ export default {
     removeAria: 'Rimuovi {name}',
     saved: 'Risparmio',
     larger: 'Più grande',
+    rasterized: 'Rasterizzato',
+    rasterizedTip:
+      'Gli SVG sono file vettoriali, quindi la versione in immagine è naturalmente più grande',
     errorPrefix: 'Errore: {message}',
     badgeSaved: 'Salvato',
   },

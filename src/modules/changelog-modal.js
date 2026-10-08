@@ -9,6 +9,12 @@
 export function getChangelogContent() {
   return `
     <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.31.3 — PDF Split Fix &amp; Engine Update</div>
+      <div class="help-changelog-items">
+        <strong>Split</strong> no longer produces an empty first file for photo-heavy PDFs. The PDF engine (MuPDF) is updated to the latest version. SVG cards now say <strong>Rasterized · SVG&nbsp;→&nbsp;PNG</strong> instead of a red “Larger” warning — turning a vector into an image always makes it bigger. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
       <div class="help-changelog-version">v0.31.2 — SVG Card Fix</div>
       <div class="help-changelog-items">
         SVGs sized as a percentage now show their real original dimensions on the card, matching what they export at. (This changelog stays in English.)

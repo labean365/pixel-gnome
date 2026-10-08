@@ -23,7 +23,7 @@
  *   - pix.convertToColorSpace(ColorSpace.DeviceRGB, false); pix.asJPEG(quality)
  *   - in-place stream replace MUST target the indirect ref: ind.put(...),
  *     ind.delete(...), ind.writeRawStream(jpegBytes)
- *   - pdf.subsetFonts(); pdf.saveToBuffer('garbage=4,deflate=yes') → Buffer
+ *   - pdf.subsetFonts(); pdf.saveToBuffer('garbage=4,compress=yes') → Buffer
  */
 
 export const PDF_ENGINE = 'mupdf';
@@ -215,9 +215,11 @@ export async function optimize(bytes, options = {}) {
     }
   }
 
-  // garbage=4 → renumber + merge duplicate objects/streams; deflate → compress streams.
-  const saveOpts = garbageCollect ? 'garbage=4,deflate=yes' : 'deflate=yes';
-  const out = pdf.saveToBuffer(saveOpts).asUint8Array();
+  // garbage=4 → renumber + merge duplicate objects/streams; compress → deflate streams.
+  // (MuPDF 1.28 removed the old 'deflate' alias — saving with it now throws
+  // "Unused pdf arguments found". 'compress' is the canonical option in 1.27+.)
+  const saveOpts = garbageCollect ? 'garbage=4,compress=yes' : 'compress=yes';
+  const out = saveToBytes(pdf, saveOpts);
 
   // Never hand back a larger file.
   return out.length < bytes.length ? out : bytes;
@@ -265,8 +267,8 @@ function subsetDoc(mupdf, srcPdf, pages) {
     // `to = -1` appends the grafted page at the end of the destination.
     map.graftPage(-1, srcPdf, p);
   }
-  // garbage=4 renumbers + merges duplicate objects/streams; deflate compresses.
-  return dst.saveToBuffer('garbage=4,deflate=yes').asUint8Array();
+  // garbage=4 renumbers + merges duplicate objects/streams; compress deflates streams.
+  return saveToBytes(dst, 'garbage=4,compress=yes');
 }
 
 /**
@@ -352,8 +354,8 @@ export async function rotatePages(bytes, rotations) {
     const next = (((cur + degrees) % 360) + 360) % 360;
     pageObj.put('Rotate', pdf.newInteger(next));
   }
-  // garbage=4 renumbers + merges duplicate objects/streams; deflate compresses.
-  return pdf.saveToBuffer('garbage=4,deflate=yes').asUint8Array();
+  // garbage=4 renumbers + merges duplicate objects/streams; compress deflates streams.
+  return saveToBytes(pdf, 'garbage=4,compress=yes');
 }
 
 /**
@@ -398,7 +400,7 @@ export async function merge(docs) {
     const n = src.countPages();
     for (let p = 0; p < n; p++) map.graftPage(-1, src, p); // -1 = append
   });
-  return dst.saveToBuffer('garbage=4,deflate=yes').asUint8Array();
+  return saveToBytes(dst, 'garbage=4,compress=yes');
 }
 
 // ---- P3 — Images → PDF ----
@@ -439,7 +441,7 @@ export async function imagesToPdf(images) {
     dst.insertPage(-1, page); // -1 = append
   });
   // Deflate compresses content/PNG streams; JPEG image streams stay DCTDecode.
-  return dst.saveToBuffer('garbage=4,deflate=yes').asUint8Array();
+  return saveToBytes(dst, 'garbage=4,compress=yes');
 }
 
 // ---- Phase 4 operations (convert) — signatures reserved ----
@@ -489,6 +491,26 @@ export async function pdfToImages(bytes, options = {}) {
     if (onProgress) onProgress(k + 1, indices.length);
   }
   return out;
+}
+
+/**
+ * Save a document and return a JS-owned copy of the bytes.
+ *
+ * `Buffer.asUint8Array()` is a live view into the WASM heap. If the heap grows
+ * before the caller copies it (e.g. `split()` saving the next part), the view
+ * is detached and reads as 0 bytes — that's how Split produced an empty first
+ * file for image-heavy PDFs. Copy immediately, then free the native buffer.
+ * @param {object} doc  A MuPDF PDFDocument.
+ * @param {string} opts  MuPDF write options.
+ * @returns {Uint8Array}
+ */
+function saveToBytes(doc, opts) {
+  const buf = doc.saveToBuffer(opts);
+  try {
+    return buf.asUint8Array().slice();
+  } finally {
+    if (typeof buf.destroy === 'function') buf.destroy();
+  }
 }
 
 /**

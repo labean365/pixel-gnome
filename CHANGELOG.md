@@ -8,6 +8,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.31.3] — 2026-10-08
+
+### PDF engine update, Split fix & SVG size row
+
+#### Fixed
+
+- **Split no longer produces an empty first file for image-heavy PDFs.** Saving a PDF returned a live view into MuPDF's WebAssembly memory; when saving the next part grew that memory, the earlier part's bytes were detached and came out as **0 bytes**. Every engine save now copies its bytes out immediately (`saveToBytes()` in `pdf-engine.js`).
+- **Ready for MuPDF 1.28.** MuPDF 1.28 removed the old `deflate=yes` save option — with it, every PDF save (compress, split, extract, rotate, merge, images→PDF) throws "Unused pdf arguments found". The engine now uses the canonical `compress=yes`, which works on 1.27 and 1.28 alike.
+
+#### Changed
+
+- **SVG cards show "Rasterized · SVG → PNG/JPG/WebP" (LAB-481).** Turning a vector into an image always makes it bigger, so the red "Larger +7000%" read like an error. SVG cards now show a neutral row, with a tooltip explaining why (EN + IT).
+- **Dependencies:** MuPDF 1.27.0 → **1.28.1**, JSZip 3.10.1 → **3.10.2** (replaces Dependabot PRs).
+
+#### Added
+
+- **`npm run check:pdf-engine`** — a runtime contract test that builds image-heavy PDFs in memory and runs every engine operation against the installed MuPDF, asserting real output. Now part of `npm run verify`, so a breaking MuPDF bump fails before it ships.
+
 ## [v0.31.2] — 2026-10-08
 
 ### Fixed

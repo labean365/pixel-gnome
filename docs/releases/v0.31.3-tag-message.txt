@@ -1,0 +1,18 @@
+v0.31.3 — PDF split fix, MuPDF 1.28.1, SVG size row
+
+PDF engine:
+- saveToBytes(): copy saved bytes off the WASM heap immediately. split() kept
+  live heap views; saving later parts grew memory and detached earlier ones,
+  so the first split part of an image-heavy PDF came out 0 bytes (live bug).
+- 'deflate=yes' -> 'compress=yes': MuPDF 1.28 rejects 'deflate' ("Unused pdf
+  arguments found"), which would have broken every PDF save.
+- new scripts/check-pdf-engine.mjs runtime contract test, added to verify.
+
+Deps: mupdf 1.27.0 -> 1.28.1, jszip 3.10.1 -> 3.10.2 (supersedes Dependabot PRs).
+
+LAB-481: SVG cards show a neutral "Rasterized · SVG -> FMT" row (EN + IT)
+instead of "Larger +N%".
+
+verify green (lint 0 errors, format, build:all, check:pdf, check:pdf-engine).
+Worker-level browser test: info/optimize/extract/rotate/split/merge/rasterize/
+preview identical on 1.27.0 vs 1.28.1 across 3 test PDFs.

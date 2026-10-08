@@ -1552,6 +1552,26 @@ fieldset.setting-group legend.setting-label {
   font-family: var(--font-mono);
 }
 
+/* Neutral variant — SVG → raster, where "larger" isn't meaningful (LAB-481) */
+.stat-savings-row:has(.stat-neutral-label) {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border);
+}
+
+.stat-neutral-label {
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+}
+
+.stat-neutral-value {
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
 /* Error row (replaces savings on failure) */
 .stat-error-row {
   display: flex;

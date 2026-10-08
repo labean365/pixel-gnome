@@ -1,7 +1,7 @@
 {
   "name": "pixel-gnome",
   "private": true,
-  "version": "0.31.2",
+  "version": "0.31.3",
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "author": "321Enterprise (https://321enterprise.com/)",
@@ -16,7 +16,8 @@
     "build:single": "vite build --config vite.singlefile.config.js && node scripts/cleanup-singlefile.mjs",
     "build:all": "vite build && vite build --config vite.singlefile.config.js",
     "check:pdf": "node scripts/check-pdf-build.mjs dist && node scripts/check-pdf-build.mjs dist-single --single",
-    "verify": "npm run lint && npm run format:check && npm run build:all && npm run check:pdf",
+    "check:pdf-engine": "node scripts/check-pdf-engine.mjs",
+    "verify": "npm run lint && npm run format:check && npm run build:all && npm run check:pdf && npm run check:pdf-engine",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -37,7 +38,7 @@
   },
   "dependencies": {
     "heic-to": "^1.4.2",
-    "jszip": "^3.10.1",
-    "mupdf": "^1.27.0"
+    "jszip": "^3.10.2",
+    "mupdf": "^1.28.1"
   }
 }

@@ -547,6 +547,8 @@ export default {
     removeAria: 'Remove {name}',
     saved: 'Saved',
     larger: 'Larger',
+    rasterized: 'Rasterized',
+    rasterizedTip: 'SVGs are vector files, so the image version is naturally larger',
     errorPrefix: 'Error: {message}',
     badgeSaved: 'Saved',
   },
