@@ -18,7 +18,7 @@ import { createDefaultEdits } from './editor.js';
 import { createColorController } from './crop-colors.js';
 import { createHistoryController } from './crop-history.js';
 import { createFocusTrap } from './shared/focus-trap.js';
-import { t } from './i18n.js';
+import { t, formatNumber } from './i18n.js';
 import {
   buildTransformedCanvas as engineBuildTransformedCanvas,
   computeLayout,
@@ -716,7 +716,7 @@ function updateSourceInfo() {
     const g = gcdHelper(w, h);
     const rw = w / g;
     const rh = h / g;
-    aspectEl.textContent = rw <= 32 && rh <= 32 ? `${rw}:${rh}` : `${(w / h).toFixed(2)}:1`;
+    aspectEl.textContent = rw <= 32 && rh <= 32 ? `${rw}:${rh}` : `${formatNumber(w / h, 2)}:1`;
   }
 }
 

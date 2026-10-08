@@ -27,7 +27,7 @@
  */
 
 import JSZip from 'jszip';
-import { t } from '../i18n.js';
+import { t, formatNumber } from '../i18n.js';
 import { showToast } from '../toast.js';
 import { announce } from '../announcer.js';
 import { createFocusTrap } from '../shared/focus-trap.js';
@@ -1564,8 +1564,8 @@ function optimizedName(name) {
 function formatBytes(bytes) {
   if (!bytes || bytes < 1024) return `${bytes || 0} B`;
   const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(kb < 10 ? 1 : 0)} KB`;
-  return `${(kb / 1024).toFixed(2)} MB`;
+  if (kb < 1024) return `${formatNumber(kb, kb < 10 ? 1 : 0)} KB`;
+  return `${formatNumber(kb / 1024, 2)} MB`;
 }
 
 function escapeHtml(s) {

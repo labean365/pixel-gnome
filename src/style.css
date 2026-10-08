@@ -676,6 +676,15 @@ fieldset.setting-group legend.setting-label {
     grid-row: 2;
   }
 
+  /* Convert-only flow (LAB-34): the Size & mode column is hidden, so lift
+     Processing into the first row instead of leaving an empty cell above it. */
+  .settings-panel:has(.drop-zone.has-images)
+    #customizePanel[open]
+    .wf-customize-body:has(> .wf-col:nth-child(1)[hidden])
+    > .wf-col:nth-child(3) {
+    grid-row: 1;
+  }
+
   /* Pair Format + Quality on one row to shorten the (tall) Output group. The
      slider sits taller than the select, so bottom-align them. */
   .settings-panel:has(.drop-zone.has-images) #customizePanel[open] .output-pair {

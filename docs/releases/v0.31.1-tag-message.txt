@@ -1,0 +1,18 @@
+v0.31.1 — SVG sizing, Italian decimals, convert-only panel
+
+LAB-173 — SVG rasterization size:
+- root <svg> width/height parsed with CSS unit conversion (mm/cm/in/pt/pc/Q/em)
+- percentage sizes fall back to viewBox; viewBox accepts commas + negative origin
+- missing width or height derived from viewBox aspect ratio
+- root pinned to computed px so intrinsic size matches on every engine
+- before: 210mm -> 210px, 2in -> 2px, 100% -> 100px, odd viewBox -> 1024x1024
+
+LAB-25 — locale-aware decimals via new i18n formatNumber() (sizes + ratios)
+
+LAB-34 — hide resize Mode radios (and the empty Size & mode column) in the
+convert-only flow (Original size preset / Convert recipe)
+
+Also: savings row no longer shows "Larger +0 B (+0%)" for equal sizes.
+
+verify green (lint 0 errors, format, build:all, check:pdf on dist + dist-single);
+SVG harness: 17 fixtures x 3 output settings in Chromium.

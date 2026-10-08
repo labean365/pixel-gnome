@@ -91,31 +91,96 @@ function sanitizeSvg(svgText) {
   return new XMLSerializer().serializeToString(svg);
 }
 
+// CSS absolute units → px (CSS reference pixel = 1/96 in). em/ex assume a 16px root font.
+const SVG_UNIT_TO_PX = {
+  '': 1,
+  px: 1,
+  pt: 96 / 72,
+  pc: 16,
+  in: 96,
+  cm: 96 / 2.54,
+  mm: 96 / 25.4,
+  q: 96 / 101.6,
+  em: 16,
+  ex: 8,
+};
+
 /**
- * Parse width and height from SVG text
+ * Convert an SVG length attribute (e.g. "200", "210mm", "2in", "12pt") to px.
+ * Returns 0 for percentages, "auto", or anything unparseable — those carry no
+ * intrinsic size and the caller should fall back to the viewBox.
+ */
+function svgLengthToPx(value) {
+  if (!value) return 0;
+  const m = String(value)
+    .trim()
+    .match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*([a-z]*)$/i);
+  if (!m) return 0;
+  const factor = SVG_UNIT_TO_PX[m[2].toLowerCase()];
+  if (factor === undefined) return 0;
+  const px = parseFloat(m[1]) * factor;
+  return Number.isFinite(px) && px > 0 ? px : 0;
+}
+
+/**
+ * Parse the intrinsic pixel size of an SVG from its root element.
+ *
+ * Handles unit-suffixed lengths (Inkscape's "210mm", "2in", "12pt"), ignores
+ * percentage sizes ("100%"), and reads viewBox values separated by commas
+ * and/or whitespace, including negative min-x/min-y. When only one of
+ * width/height is usable, the other is derived from the viewBox aspect ratio.
  */
 function parseSvgDimensions(svgText) {
   const result = { width: 0, height: 0 };
 
-  // Try explicit width/height attributes
-  const wMatch = svgText.match(/<svg[^>]*\swidth\s*=\s*["']?(\d+(?:\.\d+)?)/i);
-  const hMatch = svgText.match(/<svg[^>]*\sheight\s*=\s*["']?(\d+(?:\.\d+)?)/i);
-  if (wMatch) result.width = Math.round(parseFloat(wMatch[1]));
-  if (hMatch) result.height = Math.round(parseFloat(hMatch[1]));
+  // Isolate the opening <svg ...> tag so child attributes (e.g. a nested
+  // element's width) can never be mistaken for the root's.
+  const tagMatch = svgText.match(/<svg\b[^>]*>/i);
+  if (!tagMatch) return result;
+  const tag = tagMatch[0];
+  const attr = (name) => {
+    const m = tag.match(new RegExp('\\s' + name + '\\s*=\\s*(["\'])([^"\']*)\\1', 'i'));
+    return m ? m[2] : '';
+  };
 
-  // If both found, use them
-  if (result.width > 0 && result.height > 0) return result;
+  let width = svgLengthToPx(attr('width'));
+  let height = svgLengthToPx(attr('height'));
 
-  // Fall back to viewBox
-  const vbMatch = svgText.match(
-    /<svg[^>]*\sviewBox\s*=\s*["']?\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)/i
-  );
-  if (vbMatch) {
-    if (!result.width) result.width = Math.round(parseFloat(vbMatch[1]));
-    if (!result.height) result.height = Math.round(parseFloat(vbMatch[2]));
+  let vbW = 0;
+  let vbH = 0;
+  const vb = attr('viewBox')
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number);
+  if (vb.length === 4 && vb.every(Number.isFinite) && vb[2] > 0 && vb[3] > 0) {
+    vbW = vb[2];
+    vbH = vb[3];
   }
 
+  if (width && !height && vbW) height = (width * vbH) / vbW;
+  else if (height && !width && vbH) width = (height * vbW) / vbH;
+  else if (!width && !height && vbW) {
+    width = vbW;
+    height = vbH;
+  }
+
+  result.width = Math.round(width);
+  result.height = Math.round(height);
   return result;
+}
+
+/**
+ * Pin the root <svg>'s width/height to concrete px values. Browsers derive an
+ * <img>'s intrinsic size from these attributes; leaving them as "100%", "mm"
+ * units or absent makes rendering size browser-dependent (Firefox can refuse
+ * to draw an SVG with no intrinsic size at all).
+ */
+function setSvgRootSize(svgText, width, height) {
+  return svgText.replace(/<svg\b[^>]*>/i, (tag) => {
+    let t = tag.replace(/\s(width|height)\s*=\s*(["'])[^"']*\2/gi, '');
+    t = t.replace(/^<svg\b/i, `<svg width="${width}" height="${height}"`);
+    return t;
+  });
 }
 
 /**
@@ -141,6 +206,10 @@ async function rasterizeSvg(file, targetSize) {
   const dims = parseSvgDimensions(sanitized);
   const w = dims.width || targetSize || 1024;
   const h = dims.height || targetSize || 1024;
+
+  // Make the browser's intrinsic size agree with the size we computed, so the
+  // rasterized pixels match _svgWidth/_svgHeight on every engine.
+  sanitized = setSvgRootSize(sanitized, w, h);
 
   // Create image from data URI
   const encoded = encodeURIComponent(sanitized);

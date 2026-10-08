@@ -3,6 +3,8 @@
  * Built-in preset definitions and localStorage save/load for custom presets.
  */
 
+import { formatNumber } from './i18n.js';
+
 /**
  * @typedef {Object} Preset
  * @property {string} id
@@ -262,7 +264,7 @@ export function ratioLabel(w, h) {
   const rw = w / g;
   const rh = h / g;
   if (rw <= 32 && rh <= 32) return `${rw}:${rh}`;
-  return (w / h).toFixed(2) + ':1';
+  return formatNumber(w / h, 2) + ':1';
 }
 
 /**

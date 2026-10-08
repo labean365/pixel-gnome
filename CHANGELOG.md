@@ -8,6 +8,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.31.1] — 2026-10-07
+
+### SVG sizing, Italian number formatting & convert-only panel
+
+A patch release from the Linear backlog: real-world SVGs now come out at the right size, numbers follow Italian conventions, and the "Original size" panel drops controls that don't apply.
+
+#### Fixed
+
+- **SVGs with unit-based, percentage, or unusual viewBox sizes now rasterize at the correct size (LAB-173).** Previously `width="210mm"` (Inkscape's default A4 export) came out at 210 × 297 px instead of 794 × 1123, `width="2in"` came out at **2 × 1 px**, `width="100%"` was read as 100 px, and a `viewBox` with commas or a negative origin (`-10 -10 300 100`) fell back to a distorted 1024 × 1024 square. Sizes are now read from the root `<svg>` with CSS unit conversion (px/pt/pc/in/cm/mm/Q/em), percentages fall back to the viewBox, a missing width or height is derived from the viewBox aspect ratio, and the root is pinned to the computed pixel size so every browser renders at the same intrinsic size. Thumbnails, the editor and export all share the fix.
+- **Italian decimals (LAB-25).** File sizes and decimal ratios now use the active language's separator — "1,84 MB" and "0,71:1" in Italian; English is unchanged.
+- **No more "Larger +0 B (+0%)".** When the output is exactly the same size as the original, the savings row is now hidden instead of being labelled "Larger".
+
+#### Changed
+
+- **Convert-only panel is tighter (LAB-34).** With the **Original size — convert & compress** preset (or the **Convert** recipe), the resize **Mode** radios are hidden along with Width/Height, and in the wide layout the Processing group moves up into the space they leave. Tweaking format or quality keeps the compact panel; choosing a different preset or recipe brings the controls back. Picking "Keep original size" by hand still shows the radios so you can switch back.
+
 ## [v0.31.0] — 2026-06-23
 
 ### PDF & workspace polish — UX review minors (Tier H, H7–H18)

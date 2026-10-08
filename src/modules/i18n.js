@@ -88,6 +88,30 @@ export function getLocale() {
   return currentLang;
 }
 
+const numberFormatCache = new Map();
+
+/**
+ * Format a number with a fixed number of decimals using the active UI
+ * language's conventions (e.g. "1.39" in English, "1,39" in Italian).
+ * Grouping separators are off so byte counts like "1023 B" stay compact.
+ * @param {number} value
+ * @param {number} [decimals=0]
+ * @returns {string}
+ */
+export function formatNumber(value, decimals = 0) {
+  const key = `${currentLang}|${decimals}`;
+  let fmt = numberFormatCache.get(key);
+  if (!fmt) {
+    fmt = new Intl.NumberFormat(currentLang, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+      useGrouping: false,
+    });
+    numberFormatCache.set(key, fmt);
+  }
+  return fmt.format(value);
+}
+
 function isSupported(code) {
   return Object.prototype.hasOwnProperty.call(DICTS, code);
 }

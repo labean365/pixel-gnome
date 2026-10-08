@@ -9,7 +9,7 @@
 import { generateThumbnail } from './image-processor.js';
 import { isGifFile, isAnimatedGif, countGifFrames } from './gif-detect.js';
 import { trackUrl, revokeUrl } from './resource-tracker.js';
-import { t } from './i18n.js';
+import { t, formatNumber } from './i18n.js';
 
 const previewArea = () => document.getElementById('previewArea');
 const previewList = () => document.getElementById('previewList');
@@ -21,8 +21,8 @@ const contentEmpty = () => document.getElementById('contentEmpty');
 export function formatBytes(bytes) {
   if (bytes === 0) return '0 B';
   if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  if (bytes < 1024 * 1024) return formatNumber(bytes / 1024, 1) + ' KB';
+  return formatNumber(bytes / (1024 * 1024), 2) + ' MB';
 }
 
 /**
@@ -630,7 +630,9 @@ export function updatePreviewCardResult(id, result, updateThumb = false) {
         <span class="stat-savings-value">&minus;${formatBytes(saved)} (&minus;${pct}%)</span>
       `;
       savingsEl.hidden = false;
-    } else if (result.originalSize && result.outputSize >= result.originalSize) {
+    } else if (result.originalSize && result.outputSize > result.originalSize) {
+      // Strictly larger only — an identical size (e.g. the original passed
+      // through untouched) used to read "Larger +0 B (+0%)".
       const added = result.outputSize - result.originalSize;
       const pct = Math.round((added / result.originalSize) * 100);
       savingsEl.innerHTML = `
@@ -817,7 +819,7 @@ function getAspectRatioLabel(w, h) {
   if (rw <= 32 && rh <= 32) return `${rw}:${rh}`;
   // Fall back to decimal ratio
   const ratio = w / h;
-  return ratio.toFixed(2) + ':1';
+  return formatNumber(ratio, 2) + ':1';
 }
 
 function gcd(a, b) {

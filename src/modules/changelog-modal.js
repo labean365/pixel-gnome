@@ -9,6 +9,12 @@
 export function getChangelogContent() {
   return `
     <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.31.1 — SVG Sizing &amp; Small Fixes</div>
+      <div class="help-changelog-items">
+        <strong>SVGs come out at the right size.</strong> Files sized in millimetres, inches or points (like Inkscape’s A4 exports), sized as a percentage, or with an unusual viewBox used to rasterize far too small or squashed into a square — they now keep their real dimensions and proportions. In Italian, file sizes and ratios use a decimal comma (<strong>1,84&nbsp;MB</strong>). The <strong>Original size</strong> preset and <strong>Convert</strong> recipe now hide the resize options that don’t apply, and a file that comes out the same size no longer reads “Larger +0&nbsp;B”. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
       <div class="help-changelog-version">v0.31.0 — Polish &amp; Accessibility</div>
       <div class="help-changelog-items">
         A round of clarity and accessibility refinements. Clearer wording — Step&nbsp;1 is <strong>“Add files”</strong>, Step&nbsp;2 is <strong>“Choose what to do”</strong>, and the same action now uses the same words everywhere (<strong>Combine to PDF</strong>, <strong>Download ZIP</strong>). In the PDF editor, a divider and tooltips separate the <strong>edit-this-document</strong> actions (rotate / delete) from the <strong>save-a-new-file</strong> ones (extract / remove), the Compress tool opens by default, the resolutions now show their DPI (<strong>Screen · 96 / Standard · 150 / Print · 300</strong>), and closing with unsaved page changes now asks first. Accessibility: each page is a single tab stop with a reorder hint, disabled bulk Rotate / Flip explain why they’re greyed, low-contrast informational text was darkened to meet WCAG AA, and a redundant selection checkmark was removed. (This changelog stays in English.)

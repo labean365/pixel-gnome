@@ -64,6 +64,15 @@ const SETTINGS_SCHEMA_VERSION = 1;
 // DOM references
 let els = {};
 let state = {};
+
+/**
+ * True while the user is in the convert-only flow — they picked the
+ * "Original size — convert & compress" preset or the Convert recipe. In that
+ * flow the resize-mode radios have nothing to offer, so they're hidden (LAB-34);
+ * format/quality tweaks keep it, picking another preset or recipe clears it.
+ * Not persisted: after a reload the full Mode controls show again.
+ */
+let convertOnly = false;
 let onChange = null;
 
 // Track user-saved presets separately
@@ -81,6 +90,8 @@ export function initSettings(onChangeCallback) {
     presetSelect: document.getElementById('presetSelect'),
     recipeButtons: document.querySelectorAll('[data-recipe]'),
     resizeModes: document.querySelectorAll('input[name="resizeMode"]'),
+    modeGroup: document.getElementById('resizeModeGroup'),
+    sizeModeCol: document.getElementById('sizeModeCol'),
     targetWidth: document.getElementById('targetWidth'),
     targetHeight: document.getElementById('targetHeight'),
     dimensionsGroup: document.getElementById('dimensionsGroup'),
@@ -136,6 +147,7 @@ export function initSettings(onChangeCallback) {
       !!getPresetById(state.presetId) ||
       userPresets.some((p) => p.id === state.presetId);
     if (!presetExists) state.presetId = 'custom';
+    convertOnly = state.presetId === 'original';
   } else {
     const defaultPreset = getDefaultPreset();
     applyPresetToState(defaultPreset);
@@ -522,6 +534,7 @@ function migratePreset(preset) {
 
 function applyPresetToState(preset) {
   const migrated = migratePreset({ ...preset });
+  convertOnly = migrated.mode === 'original';
   state = {
     presetId: migrated.id,
     recipeId: null,
@@ -559,6 +572,7 @@ function applyRecipe(id) {
   } else if (recipe.settings) {
     // Patch the current state, then relabel the preset as Custom.
     state = { ...state, ...recipe.settings, presetId: 'custom' };
+    convertOnly = recipe.settings.mode === 'original';
   }
   state.recipeId = id;
 
@@ -719,6 +733,13 @@ function updateDimensionsVisibility() {
   // 'original' keeps the source pixel dimensions, so the width/height inputs
   // have nothing to control — hide the whole group.
   if (els.dimensionsGroup) els.dimensionsGroup.style.display = isOriginal ? 'none' : '';
+  // In the convert-only flow the Mode radios are noise too (LAB-34). Choosing
+  // "Keep original size" by hand leaves them visible so the user can switch back.
+  // With both Mode and Width/Height hidden the whole column is empty — hide it
+  // too so the wide two-column layout doesn't keep a blank cell (see style.css).
+  const hideSizeMode = isOriginal && convertOnly;
+  if (els.modeGroup) els.modeGroup.hidden = hideSizeMode;
+  if (els.sizeModeCol) els.sizeModeCol.hidden = hideSizeMode;
   els.targetHeight.parentElement.style.display = isMaxLongEdge ? 'none' : '';
   els.dimensionSep.style.display = isMaxLongEdge ? 'none' : '';
 }
