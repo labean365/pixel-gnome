@@ -1,0 +1,14 @@
+v0.31.4 — language switch updates everything on screen (LAB-28)
+
+- preview cards re-translate in place on EN<->IT switch: static text via
+  data-i18n markers (+ new data-i18n-vars support), computed values (sizes,
+  ratios, savings rows, PDF page lines, processed aria) via
+  relocalizePreviewCards() from raw numbers stored on each element
+- Step 3 export readout translated (was hard-coded English in every locale)
+- image card aria-labels translated (were hard-coded English)
+- preset dropdown ratio badges, History panel and drop overlay refresh on switch
+
+Verified in Chromium: EN->IT switched cards == fresh IT cards (0 diffs across
+text, title, aria-label, data-tooltip, alt), IT->EN == original EN, and a
+switch during processing == fresh IT. EN/IT dictionaries at parity (531 keys).
+verify green.

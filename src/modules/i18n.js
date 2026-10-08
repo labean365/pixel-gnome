@@ -193,9 +193,24 @@ export function setLocale(code) {
  * overwrites it for the active locale (and harmlessly re-sets English for en).
  * @param {ParentNode} [root=document]
  */
+/**
+ * Interpolation vars for an element, from its optional `data-i18n-vars` JSON
+ * attribute (e.g. `{"name":"photo.jpg"}` or `{"count":3}`). Lets dynamically
+ * built markup — preview cards — re-translate on a language switch (LAB-28).
+ */
+function varsFor(el) {
+  const raw = el.getAttribute('data-i18n-vars');
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
 export function applyStaticTranslations(root = document) {
   root.querySelectorAll('[data-i18n]').forEach((el) => {
-    el.textContent = t(el.getAttribute('data-i18n'));
+    el.textContent = t(el.getAttribute('data-i18n'), varsFor(el));
   });
 
   root.querySelectorAll('[data-i18n-html]').forEach((el) => {
@@ -207,7 +222,7 @@ export function applyStaticTranslations(root = document) {
       .split(';')
       .forEach((pair) => {
         const [attr, key] = pair.split(':').map((s) => s && s.trim());
-        if (attr && key) el.setAttribute(attr, t(key));
+        if (attr && key) el.setAttribute(attr, t(key, varsFor(el)));
       });
   });
 }

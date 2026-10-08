@@ -9,6 +9,12 @@
 export function getChangelogContent() {
   return `
     <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.31.4 — Language Switch Updates Everything</div>
+      <div class="help-changelog-items">
+        Switching between <strong>English and Italian</strong> now updates the files you’ve already added — labels, buttons, file sizes and savings all change language straight away, no need to re-add anything. The Step&nbsp;3 export summary is now translated too, as are the preset list, History panel and screen-reader labels. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
       <div class="help-changelog-version">v0.31.3 — PDF Split Fix &amp; Engine Update</div>
       <div class="help-changelog-items">
         <strong>Split</strong> no longer produces an empty first file for photo-heavy PDFs. The PDF engine (MuPDF) is updated to the latest version. SVG cards now say <strong>Rasterized · SVG&nbsp;→&nbsp;PNG</strong> instead of a red “Larger” warning — turning a vector into an image always makes it bigger. (This changelog stays in English.)

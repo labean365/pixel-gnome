@@ -8,6 +8,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.31.4] — 2026-10-08
+
+### Language switching updates everything on screen (LAB-28)
+
+#### Fixed
+
+- **Cards re-translate when you switch EN ↔ IT mid-session.** Previously, files already loaded kept their old-language labels, tooltips, aria text and number format; only new cards and the static chrome switched. Now every image and PDF card updates in place — labels, buttons, badges, file sizes, ratios, savings rows and PDF page lines — without reprocessing. Verified: a card switched EN→IT is identical to the same card rendered fresh in Italian (and back again), including a switch made while files are still processing.
+- **Step 3 export readout is now translated.** "Ready after step 1", "N images · ~X out", "calculating…" and "Exported ✓" were hard-coded English even in Italian ("2 immagini · ~1,11 MB in uscita").
+- **Image cards' screen-reader labels are translated** ("Image: name, processing" / "Image processed: W × H, size" were hard-coded English).
+- **Also refreshed on a switch:** the preset list's decimal ratio badges (e.g. "1,90:1"), the History panel (heading, clear button, sizes, times) and the full-window drop overlay text.
+
+#### Internal
+
+- `applyStaticTranslations()` now supports `data-i18n-vars` (JSON interpolation vars), so dynamically built markup can carry its own translation markers.
+- `relocalizePreviewCards()` (preview.js) re-renders computed values from raw numbers stored on each element; wired to `onLocaleChange` in main.js, alongside `updateExportMeta()`, the preset dropdown and the History panel.
+- New i18n keys (EN + IT draft): `card.ariaProcessing`, `card.ariaProcessed`, `step3.metaImages`, `step3.metaOut`, `step3.metaCalculating`, `step3.exported`.
+
 ## [v0.31.3] — 2026-10-08
 
 ### PDF engine update, Split fix & SVG size row

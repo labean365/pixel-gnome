@@ -33,6 +33,7 @@ import {
   updateCropOverlay,
   setCardEditedState,
   formatBytes,
+  relocalizePreviewCards,
 } from './modules/preview.js';
 import { buildOutputFilename, downloadBlob } from './modules/exporter.js';
 import { showToast } from './modules/toast.js';
@@ -160,6 +161,13 @@ const helpBtn = document.getElementById('helpBtn');
 // renders, so the first paint is already in the right language.
 initI18n();
 initLangSwitcher();
+// Cards already on screen re-render their sizes, ratios and savings in the new
+// language (labels/tooltips re-translate via their data-i18n markers) — LAB-28.
+onLocaleChange(() => {
+  relocalizePreviewCards();
+  // The Step 3 readout is computed text (counts + sizes), not a static label.
+  updateExportMeta();
+});
 
 // Theme toggle (before other modules so it applies immediately)
 initTheme(themeToggleBtn);
@@ -594,13 +602,15 @@ function updateExportMeta() {
   if (!meta || exportConfirmActive) return;
 
   if (count === 0) {
-    meta.textContent = 'Ready after step 1';
+    meta.textContent = t('step3.meta');
     return;
   }
 
-  const imgs = `${count} image${count > 1 ? 's' : ''}`;
+  const images = t('step3.metaImages', { count });
   meta.textContent =
-    done === count ? `${imgs} · ~${formatBytes(bytes)} out` : `${imgs} · calculating…`;
+    done === count
+      ? t('step3.metaOut', { images, size: formatBytes(bytes) })
+      : t('step3.metaCalculating', { images });
 }
 
 /**
@@ -615,7 +625,7 @@ function flashExportConfirm() {
     step3Num.classList.add('done');
     step3Num.textContent = '✓';
   }
-  if (meta) meta.textContent = 'Exported ✓';
+  if (meta) meta.textContent = t('step3.exported');
   if (exportConfirmTimer) clearTimeout(exportConfirmTimer);
   exportConfirmTimer = setTimeout(() => {
     exportConfirmActive = false;
@@ -2628,6 +2638,9 @@ function resetCardToProcessing(id) {
   if (savingsEl) {
     savingsEl.hidden = true;
     savingsEl.className = 'stat-savings-row';
+    // Drop the stored numbers so a language switch mid-reprocess doesn't
+    // re-show the previous result (relocalizePreviewCards).
+    delete savingsEl.dataset.savings;
   }
 
   // Disable action buttons

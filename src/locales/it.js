@@ -290,6 +290,10 @@ export default {
     zip: 'ZIP',
     zipTip: 'Scarica tutte le immagini come un unico ZIP',
     meta: 'Disponibile dopo il passaggio 1',
+    metaImages: { one: '1 immagine', other: '{count} immagini' },
+    metaOut: '{images} · ~{size} in uscita',
+    metaCalculating: '{images} · calcolo in corso…',
+    exported: 'Esportato ✓',
   },
 
   empty: {
@@ -567,6 +571,8 @@ export default {
     removeAria: 'Rimuovi {name}',
     saved: 'Risparmio',
     larger: 'Più grande',
+    ariaProcessing: 'Immagine: {name}, in elaborazione',
+    ariaProcessed: 'Immagine elaborata: {width} × {height}, {size}',
     rasterized: 'Rasterizzato',
     rasterizedTip:
       'Gli SVG sono file vettoriali, quindi la versione in immagine è naturalmente più grande',

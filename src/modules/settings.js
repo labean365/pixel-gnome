@@ -16,7 +16,7 @@ import {
   saveCustomPresets,
 } from './presets.js';
 import { showToast } from './toast.js';
-import { t } from './i18n.js';
+import { t, onLocaleChange } from './i18n.js';
 import { trackUrl, revokeUrl } from './resource-tracker.js';
 import { trackRecipeSelected } from './analytics.js';
 
@@ -129,6 +129,9 @@ export function initSettings(onChangeCallback) {
   // Migrate legacy "suffix" → "pattern" on user presets
   userPresets = loadCustomPresets().map(migratePreset);
   rebuildPresetDropdown();
+  // Decimal ratio badges (e.g. "1.90:1") follow the UI language — rebuild the
+  // dropdown on a switch (LAB-28).
+  onLocaleChange(() => rebuildPresetDropdown());
 
   // Restore persisted settings if available, otherwise use default preset
   const savedSettings = loadSettingsFromStorage();

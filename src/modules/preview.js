@@ -26,6 +26,35 @@ export function formatBytes(bytes) {
 }
 
 /**
+ * Attributes for a translatable element: the current translation plus the
+ * `data-i18n-attr` / `data-i18n-vars` markers that let applyStaticTranslations()
+ * re-translate it in place on a language switch (LAB-28).
+ * @param {Object<string,string>} pairs  attribute name → i18n key
+ * @param {object} [vars]  interpolation vars
+ * @returns {string}
+ */
+function l10nAttrs(pairs, vars) {
+  const entries = Object.entries(pairs);
+  const now = entries.map(([attr, key]) => `${attr}="${escapeAttr(t(key, vars))}"`).join(' ');
+  const spec = entries.map(([attr, key]) => `${attr}:${key}`).join(';');
+  const v = vars ? ` data-i18n-vars="${escapeAttr(JSON.stringify(vars))}"` : '';
+  return `${now} data-i18n-attr="${spec}"${v}`;
+}
+
+/**
+ * A text span that re-translates in place on a language switch (LAB-28).
+ * @param {string} key
+ * @param {object} [vars]
+ * @param {string} [className]
+ * @returns {string}
+ */
+function l10nText(key, vars, className) {
+  const cls = className ? ` class="${className}"` : '';
+  const v = vars ? ` data-i18n-vars="${escapeAttr(JSON.stringify(vars))}"` : '';
+  return `<span${cls} data-i18n="${key}"${v}>${escapeHtml(t(key, vars))}</span>`;
+}
+
+/**
  * Show the preview area
  */
 export function showPreviewArea() {
@@ -72,7 +101,9 @@ export async function addPreviewCard(id, file, onRemove, onDownload, editCallbac
   card.className = 'preview-card processing';
   card.id = `card-${id}`;
   card.setAttribute('role', 'listitem');
-  card.setAttribute('aria-label', `Image: ${file.name}, processing`);
+  card.setAttribute('aria-label', t('card.ariaProcessing', { name: file.name }));
+  card.setAttribute('data-i18n-attr', 'aria-label:card.ariaProcessing');
+  card.setAttribute('data-i18n-vars', JSON.stringify({ name: file.name }));
   // Focusable so keyboard users can Tab to a card and use Alt+ArrowUp /
   // Alt+ArrowDown to reorder it. (Mouse drag-to-reorder was removed — it
   // conflicted with the full-window file-drop overlay.)
@@ -128,30 +159,30 @@ export async function addPreviewCard(id, file, onRemove, onDownload, editCallbac
   // Build edit toolbar HTML (only if callbacks provided)
   const editToolbar = editCallbacks
     ? `
-    <div class="edit-toolbar" role="toolbar" aria-label="${escapeAttr(t('card.editAria', { name: file.name }))}">
-      <button class="btn btn-icon btn-sm" data-action="rotate-ccw" data-tooltip="${t('card.rotateLeftTip')}" title="${t('card.rotateLeft')}" aria-label="${t('card.rotateLeft')}">
+    <div class="edit-toolbar" role="toolbar" ${l10nAttrs({ 'aria-label': 'card.editAria' }, { name: file.name })}>
+      <button class="btn btn-icon btn-sm" data-action="rotate-ccw" ${l10nAttrs({ 'data-tooltip': 'card.rotateLeftTip', title: 'card.rotateLeft', 'aria-label': 'card.rotateLeft' })}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
       </button>
-      <button class="btn btn-icon btn-sm" data-action="rotate-cw" data-tooltip="${t('card.rotateRightTip')}" title="${t('card.rotateRight')}" aria-label="${t('card.rotateRight')}">
+      <button class="btn btn-icon btn-sm" data-action="rotate-cw" ${l10nAttrs({ 'data-tooltip': 'card.rotateRightTip', title: 'card.rotateRight', 'aria-label': 'card.rotateRight' })}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       </button>
-      <button class="btn btn-icon btn-sm" data-action="flip-h" data-tooltip="${t('card.flipHTip')}" title="${t('card.flipH')}" aria-label="${t('card.flipH')}">
+      <button class="btn btn-icon btn-sm" data-action="flip-h" ${l10nAttrs({ 'data-tooltip': 'card.flipHTip', title: 'card.flipH', 'aria-label': 'card.flipH' })}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 16 3 12 7 8"/><polyline points="17 8 21 12 17 16"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
       </button>
-      <button class="btn btn-icon btn-sm" data-action="flip-v" data-tooltip="${t('card.flipVTip')}" title="${t('card.flipV')}" aria-label="${t('card.flipV')}">
+      <button class="btn btn-icon btn-sm" data-action="flip-v" ${l10nAttrs({ 'data-tooltip': 'card.flipVTip', title: 'card.flipV', 'aria-label': 'card.flipV' })}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 7 12 3 16 7"/><polyline points="16 17 12 21 8 17"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
       </button>
-      <button class="btn btn-icon btn-sm" data-action="crop" data-tooltip="${t('card.cropTip')}" title="${t('card.crop')}" aria-label="${t('card.crop')}">
+      <button class="btn btn-icon btn-sm" data-action="crop" ${l10nAttrs({ 'data-tooltip': 'card.cropTip', title: 'card.crop', 'aria-label': 'card.crop' })}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"/><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"/></svg>
       </button>
       <span class="edit-toolbar-sep" aria-hidden="true"></span>
-      <button class="btn-edit" data-action="open-editor" data-tooltip="${t('card.editTip')}" title="${t('card.editTitle')}" aria-label="${t('card.editTitle')}">
+      <button class="btn-edit" data-action="open-editor" ${l10nAttrs({ 'data-tooltip': 'card.editTip', title: 'card.editTitle', 'aria-label': 'card.editTitle' })}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        ${t('card.edit')}
+        ${l10nText('card.edit')}
       </button>
-      <button class="btn-revert card-revert" data-action="revert" data-tooltip="${t('card.revertTip')}" title="${t('card.revertTitle')}" aria-label="${t('card.revertTitle')}" hidden>
+      <button class="btn-revert card-revert" data-action="revert" ${l10nAttrs({ 'data-tooltip': 'card.revertTip', title: 'card.revertTitle', 'aria-label': 'card.revertTitle' })} hidden>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg>
-        ${t('card.revert')}
+        ${l10nText('card.revert')}
       </button>
     </div>
   `
@@ -163,12 +194,12 @@ export async function addPreviewCard(id, file, onRemove, onDownload, editCallbac
 
   card.innerHTML = `
     <div class="preview-card-gutter">
-      <button type="button" class="preview-card-select" data-action="select" aria-pressed="false" aria-label="${escapeAttr(t('card.selectAria', { name: file.name }))}" title="${t('card.selectTitle')}">
+      <button type="button" class="preview-card-select" data-action="select" aria-pressed="false" ${l10nAttrs({ 'aria-label': 'card.selectAria', title: 'card.selectTitle' }, { name: file.name })}>
         <svg class="select-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
       </button>
     </div>
-    <div class="preview-card-thumb${editCallbacks ? ' clickable' : ''}" data-action="thumb-edit" title="${t('card.thumbTitle')}"${typeof origWidth === 'number' ? ` data-ow="${origWidth}" data-oh="${origHeight}"` : ''}>
-      ${thumbSrc ? `<img src="${thumbSrc}" alt="${escapeAttr(t('card.imgAlt', { name: file.name }))}" />` : ''}
+    <div class="preview-card-thumb${editCallbacks ? ' clickable' : ''}" data-action="thumb-edit" ${l10nAttrs({ title: 'card.thumbTitle' })}${typeof origWidth === 'number' ? ` data-ow="${origWidth}" data-oh="${origHeight}"` : ''}>
+      ${thumbSrc ? `<img src="${thumbSrc}" ${l10nAttrs({ alt: 'card.imgAlt' }, { name: file.name })} />` : ''}
       <div class="crop-overlay" id="cropov-${id}" hidden aria-hidden="true">
         <div class="crop-overlay-keep"></div>
       </div>
@@ -176,30 +207,30 @@ export async function addPreviewCard(id, file, onRemove, onDownload, editCallbac
     <div class="preview-card-info">
       <div class="preview-card-header">
         <span class="preview-card-name" title="${escapeAttr(file.name)}">${escapeHtml(file.name)}</span>
-        <span class="preview-card-type" data-type="${typeLabel}">${typeLabel}</span>${animated ? `<span class="preview-card-badge animated-badge">${frameCount ? t('card.framesBadge', { count: frameCount }) : t('card.animatedBadge')}</span>` : ''}
+        <span class="preview-card-type" data-type="${typeLabel}">${typeLabel}</span>${animated ? `${frameCount ? l10nText('card.framesBadge', { count: frameCount }, 'preview-card-badge animated-badge') : l10nText('card.animatedBadge', undefined, 'preview-card-badge animated-badge')}` : ''}
       </div>
       <div class="preview-card-stats">
         <div class="stat-grid" id="statgrid-${id}">
           <!-- Row 1: Dimensions -->
-          <span class="stat-label">${t('card.statDimensions')}</span>
+          ${l10nText('card.statDimensions', undefined, 'stat-label')}
           <span class="stat-val stat-dim">${origWidth !== '—' ? `${origWidth} &times; ${origHeight}` : '—'}</span>
           <span class="stat-arrow" id="arrow-dim-${id}"></span>
           <span class="stat-val stat-dim stat-new" id="new-dim-${id}"></span>
           <!-- Row 2: Ratio -->
-          <span class="stat-label">${t('card.statRatio')}</span>
-          <span class="stat-val stat-ratio">${aspectStr || '—'}</span>
+          ${l10nText('card.statRatio', undefined, 'stat-label')}
+          <span class="stat-val stat-ratio"${typeof origWidth === 'number' ? ` data-ratio="${origWidth}:${origHeight}"` : ''}>${aspectStr || '—'}</span>
           <span class="stat-arrow" id="arrow-ratio-${id}"></span>
           <span class="stat-val stat-ratio stat-new" id="new-ratio-${id}"></span>
           <!-- Row 3: File size -->
-          <span class="stat-label">${t('card.statSize')}</span>
-          <span class="stat-val stat-filesize">${formatBytes(file.size)}</span>
+          ${l10nText('card.statSize', undefined, 'stat-label')}
+          <span class="stat-val stat-filesize" data-bytes="${file.size}">${formatBytes(file.size)}</span>
           <span class="stat-arrow" id="arrow-size-${id}"></span>
           <span class="stat-val stat-filesize stat-new" id="new-size-${id}"></span>
         </div>
         <!-- Processing indicator (shown while working) -->
         <div class="stat-processing-row" id="processing-${id}">
           <span class="stat-processing-indicator"></span>
-          <span class="stat-processing-text">${t('card.processing')}</span>
+          ${l10nText('card.processing', undefined, 'stat-processing-text')}
         </div>
         <!-- Card-level determinate progress (shown for slow ops: HEIC, animated GIF) -->
         <div class="card-progress" id="card-progress-${id}" hidden role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -214,7 +245,7 @@ export async function addPreviewCard(id, file, onRemove, onDownload, editCallbac
       ${editToolbar}
     </div>
     <div class="preview-card-actions">
-      <button class="btn btn-icon" data-action="download" data-tooltip="${t('card.downloadTip')}" title="${t('card.downloadTitle')}" aria-label="${escapeAttr(t('card.downloadAria', { name: file.name }))}" disabled>
+      <button class="btn btn-icon" data-action="download" ${l10nAttrs({ 'data-tooltip': 'card.downloadTip', title: 'card.downloadTitle', 'aria-label': 'card.downloadAria' }, { name: file.name })} disabled>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/>
@@ -224,7 +255,7 @@ export async function addPreviewCard(id, file, onRemove, onDownload, editCallbac
       ${
         navigator.clipboard && navigator.clipboard.write
           ? `
-      <button class="btn btn-icon" data-action="copy" data-tooltip="${t('card.copyTip')}" title="${t('card.copyTitle')}" aria-label="${escapeAttr(t('card.copyAria', { name: file.name }))}" disabled>
+      <button class="btn btn-icon" data-action="copy" ${l10nAttrs({ 'data-tooltip': 'card.copyTip', title: 'card.copyTitle', 'aria-label': 'card.copyAria' }, { name: file.name })} disabled>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -233,7 +264,7 @@ export async function addPreviewCard(id, file, onRemove, onDownload, editCallbac
       `
           : ''
       }
-      <button class="btn btn-icon btn-danger" data-action="remove" data-tooltip="${t('card.removeTip')}" title="${t('card.removeTitle')}" aria-label="${escapeAttr(t('card.removeAria', { name: file.name }))}">
+      <button class="btn btn-icon btn-danger" data-action="remove" ${l10nAttrs({ 'data-tooltip': 'card.removeTip', title: 'card.removeTitle', 'aria-label': 'card.removeAria' }, { name: file.name })}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/>
           <line x1="6" y1="6" x2="18" y2="18"/>
@@ -307,15 +338,17 @@ export function addPdfPreviewCard(id, file, onRemove, onOpen, onDownload) {
   card.dataset.kind = 'pdf';
   card.setAttribute('role', 'listitem');
   card.setAttribute('aria-label', t('card.pdfAria', { name: file.name }));
+  card.setAttribute('data-i18n-attr', 'aria-label:card.pdfAria');
+  card.setAttribute('data-i18n-vars', JSON.stringify({ name: file.name }));
   card.setAttribute('tabindex', '0');
 
   card.innerHTML = `
     <div class="preview-card-gutter">
-      <button type="button" class="preview-card-select" data-action="select" aria-pressed="false" aria-label="${escapeAttr(t('card.selectAria', { name: file.name }))}" title="${t('card.selectTitle')}">
+      <button type="button" class="preview-card-select" data-action="select" aria-pressed="false" ${l10nAttrs({ 'aria-label': 'card.selectAria', title: 'card.selectTitle' }, { name: file.name })}>
         <svg class="select-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
       </button>
     </div>
-    <div class="preview-card-thumb clickable" data-action="open-pdf" title="${escapeAttr(t('card.editPagesTitle'))}">
+    <div class="preview-card-thumb clickable" data-action="open-pdf" ${l10nAttrs({ title: 'card.editPagesTitle' })}>
       <div class="pdf-thumb-placeholder" id="pdfthumb-${id}" aria-hidden="true">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
@@ -327,26 +360,26 @@ export function addPdfPreviewCard(id, file, onRemove, onOpen, onDownload) {
         <span class="preview-card-badge pdf-badge" id="pdfbadge-${id}" hidden></span>
       </div>
       <div class="preview-card-stats">
-        <div class="pdf-meta-line" id="pdfmeta-${id}">${escapeHtml(t('card.pdfPagesLoading'))} &middot; ${formatBytes(file.size)}</div>
+        <div class="pdf-meta-line" id="pdfmeta-${id}" data-bytes-total="${file.size}">${escapeHtml(t('card.pdfPagesLoading'))} &middot; ${formatBytes(file.size)}</div>
         <!-- Savings line, shown after an in-place optimize (H4 — parity with image cards) -->
         <div class="stat-savings-row" id="pdfsavings-${id}" hidden></div>
       </div>
       <div class="edit-toolbar">
-        <button class="btn-edit" data-action="open-pdf" data-tooltip="${t('card.editPagesTitle')}" title="${t('card.editPagesTitle')}" aria-label="${t('card.editPagesTitle')}">
+        <button class="btn-edit" data-action="open-pdf" ${l10nAttrs({ 'data-tooltip': 'card.editPagesTitle', title: 'card.editPagesTitle', 'aria-label': 'card.editPagesTitle' })}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          ${t('card.editPages')}
+          ${l10nText('card.editPages')}
         </button>
       </div>
     </div>
     <div class="preview-card-actions">
-      <button class="btn btn-icon" data-action="download-pdf" data-tooltip="${t('card.downloadTip')}" title="${t('card.downloadTitle')}" aria-label="${escapeAttr(t('card.downloadAria', { name: file.name }))}">
+      <button class="btn btn-icon" data-action="download-pdf" ${l10nAttrs({ 'data-tooltip': 'card.downloadTip', title: 'card.downloadTitle', 'aria-label': 'card.downloadAria' }, { name: file.name })}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/>
           <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
       </button>
-      <button class="btn btn-icon btn-danger" data-action="remove" data-tooltip="${t('card.removeTip')}" title="${t('card.removeTitle')}" aria-label="${escapeAttr(t('card.removeAria', { name: file.name }))}">
+      <button class="btn btn-icon btn-danger" data-action="remove" ${l10nAttrs({ 'data-tooltip': 'card.removeTip', title: 'card.removeTitle', 'aria-label': 'card.removeAria' }, { name: file.name })}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/>
           <line x1="6" y1="6" x2="18" y2="18"/>
@@ -379,13 +412,17 @@ export function updatePdfCardMeta(id, meta) {
 
   const badge = document.getElementById(`pdfbadge-${id}`);
   if (badge) {
+    badge.setAttribute('data-i18n', 'card.pdfBadge');
+    badge.setAttribute('data-i18n-vars', JSON.stringify({ count: n }));
     badge.textContent = t('card.pdfBadge', { count: n });
     badge.hidden = false;
   }
 
   const metaLine = document.getElementById(`pdfmeta-${id}`);
   if (metaLine) {
-    metaLine.textContent = `${t('card.pdfPages', { count: n })} · ${formatBytes(meta.fileSize || 0)}`;
+    metaLine.dataset.pages = String(n);
+    metaLine.dataset.bytesTotal = String(meta.fileSize || 0);
+    renderPdfMetaLine(metaLine);
   }
 
   if (meta.thumbnailUrl) {
@@ -396,6 +433,7 @@ export function updatePdfCardMeta(id, meta) {
       const img = document.createElement('img');
       img.src = meta.thumbnailUrl;
       img.alt = t('card.pdfThumbAlt');
+      img.setAttribute('data-i18n-attr', 'alt:card.pdfThumbAlt');
       thumb.insertBefore(img, thumb.firstChild);
     }
   }
@@ -413,15 +451,11 @@ export function setPdfCardSavings(id, before, after) {
   const el = document.getElementById(`pdfsavings-${id}`);
   if (!el) return;
   if (before && after < before) {
-    const saved = before - after;
-    const pct = Math.round((saved / before) * 100);
-    el.innerHTML = `
-      <span class="stat-savings-label">${t('card.saved')}</span>
-      <span class="stat-savings-value">&minus;${formatBytes(saved)} (&minus;${pct}%)</span>
-    `;
     el.className = 'stat-savings-row';
-    el.hidden = false;
+    el.dataset.savings = JSON.stringify({ before, after });
+    renderSavingsRow(el);
   } else {
+    delete el.dataset.savings;
     el.hidden = true;
   }
 }
@@ -562,10 +596,15 @@ export function updatePreviewCardResult(id, result, updateThumb = false) {
   if (!card) return;
 
   card.classList.remove('processing');
-  card.setAttribute(
-    'aria-label',
-    `Image processed: ${result.outputWidth}x${result.outputHeight}, ${formatBytes(result.outputSize)}`
-  );
+  // The processed label includes a formatted size, so it's re-rendered by
+  // relocalizePreviewCards() rather than the static data-i18n markers.
+  card.removeAttribute('data-i18n-attr');
+  card.dataset.ariaOut = JSON.stringify({
+    width: result.outputWidth,
+    height: result.outputHeight,
+    bytes: result.outputSize,
+  });
+  setProcessedAria(card);
 
   // Only swap the thumbnail when explicitly requested (after edits) or when
   // the initial thumbnail generation failed and there's no preview yet.
@@ -604,11 +643,17 @@ export function updatePreviewCardResult(id, result, updateThumb = false) {
 
   // Populate grid "new" column — ratio
   const newRatio = document.getElementById(`new-ratio-${id}`);
-  if (newRatio) newRatio.textContent = outAspect;
+  if (newRatio) {
+    newRatio.dataset.ratio = `${result.outputWidth}:${result.outputHeight}`;
+    newRatio.textContent = outAspect;
+  }
 
   // Populate grid "new" column — file size
   const newSize = document.getElementById(`new-size-${id}`);
-  if (newSize) newSize.textContent = formatBytes(result.outputSize);
+  if (newSize) {
+    newSize.dataset.bytes = String(result.outputSize);
+    newSize.textContent = formatBytes(result.outputSize);
+  }
 
   // Show arrows
   const arrowDim = document.getElementById(`arrow-dim-${id}`);
@@ -622,38 +667,16 @@ export function updatePreviewCardResult(id, result, updateThumb = false) {
   const grid = document.getElementById(`statgrid-${id}`);
   if (grid) grid.classList.add('has-output');
 
-  // Savings row
+  // Savings row — the numbers are stored on the element so a language switch
+  // can re-render it in place (relocalizePreviewCards, LAB-28).
   const savingsEl = document.getElementById(`savings-${id}`);
   if (savingsEl) {
-    if (card.dataset.vector) {
-      const fmt = rasterFormatLabel(result.blob && result.blob.type);
-      savingsEl.innerHTML = `
-        <span class="stat-neutral-label">${t('card.rasterized')}</span>
-        <span class="stat-neutral-value">SVG &rarr; ${fmt}</span>
-      `;
-      savingsEl.title = t('card.rasterizedTip');
-      savingsEl.hidden = false;
-    } else if (result.originalSize && result.outputSize < result.originalSize) {
-      const saved = result.originalSize - result.outputSize;
-      const pct = Math.round((saved / result.originalSize) * 100);
-      savingsEl.innerHTML = `
-        <span class="stat-savings-label">${t('card.saved')}</span>
-        <span class="stat-savings-value">&minus;${formatBytes(saved)} (&minus;${pct}%)</span>
-      `;
-      savingsEl.hidden = false;
-    } else if (result.originalSize && result.outputSize > result.originalSize) {
-      // Strictly larger only — an identical size (e.g. the original passed
-      // through untouched) used to read "Larger +0 B (+0%)".
-      const added = result.outputSize - result.originalSize;
-      const pct = Math.round((added / result.originalSize) * 100);
-      savingsEl.innerHTML = `
-        <span class="stat-increase-label">${t('card.larger')}</span>
-        <span class="stat-increase-value">+${formatBytes(added)} (+${pct}%)</span>
-      `;
-      savingsEl.hidden = false;
-    } else {
-      savingsEl.hidden = true;
-    }
+    savingsEl.dataset.savings = JSON.stringify({
+      before: result.originalSize || 0,
+      after: result.outputSize,
+      vector: card.dataset.vector ? rasterFormatLabel(result.blob && result.blob.type) : null,
+    });
+    renderSavingsRow(savingsEl);
   }
 
   // Enable download and copy buttons
@@ -675,6 +698,8 @@ export function updatePreviewCardError(id, message) {
 
   card.classList.remove('processing');
   card.classList.add('error');
+  card.removeAttribute('data-i18n-attr');
+  delete card.dataset.ariaOut;
   card.setAttribute('aria-label', t('card.errorPrefix', { message }));
 
   // Hide processing indicator
@@ -687,6 +712,7 @@ export function updatePreviewCardError(id, message) {
   // Show error in savings row area
   const savingsEl = document.getElementById(`savings-${id}`);
   if (savingsEl) {
+    delete savingsEl.dataset.savings;
     savingsEl.innerHTML = `<span class="preview-card-error">${message}</span>`;
     savingsEl.hidden = false;
     savingsEl.className = 'stat-error-row';
@@ -708,7 +734,7 @@ export function markPreviewCardExported(id) {
   if (nameEl && !nameEl.querySelector('.exported-badge')) {
     const badge = document.createElement('span');
     badge.className = 'exported-badge';
-    badge.innerHTML = ` &#10003; ${t('card.badgeSaved')}`;
+    badge.innerHTML = ` &#10003; ${l10nText('card.badgeSaved')}`;
     nameEl.appendChild(badge);
   }
 }
@@ -827,6 +853,105 @@ async function getImageDimensions(file) {
     };
     img.src = url;
   });
+}
+
+/**
+ * Render a savings row from the numbers stored in its `data-savings` JSON
+ * ({ before, after, vector }). Shared by first render and language switches.
+ *   - vector: SVG input → neutral "Rasterized · SVG → FMT" (LAB-481)
+ *   - after < before → "Saved −X (−N%)"
+ *   - after > before → "Larger +X (+N%)"
+ *   - equal → hidden
+ * @param {HTMLElement} el
+ */
+function renderSavingsRow(el) {
+  let data;
+  try {
+    data = JSON.parse(el.dataset.savings || 'null');
+  } catch {
+    data = null;
+  }
+  if (!data) return;
+  const { before, after, vector } = data;
+  if (vector) {
+    el.innerHTML = `
+      <span class="stat-neutral-label">${t('card.rasterized')}</span>
+      <span class="stat-neutral-value">SVG &rarr; ${vector}</span>
+    `;
+    el.title = t('card.rasterizedTip');
+    el.hidden = false;
+  } else if (before && after < before) {
+    const saved = before - after;
+    const pct = Math.round((saved / before) * 100);
+    el.innerHTML = `
+      <span class="stat-savings-label">${t('card.saved')}</span>
+      <span class="stat-savings-value">&minus;${formatBytes(saved)} (&minus;${pct}%)</span>
+    `;
+    el.hidden = false;
+  } else if (before && after > before) {
+    // Strictly larger only — an identical size (e.g. the original passed
+    // through untouched) used to read "Larger +0 B (+0%)".
+    const added = after - before;
+    const pct = Math.round((added / before) * 100);
+    el.innerHTML = `
+      <span class="stat-increase-label">${t('card.larger')}</span>
+      <span class="stat-increase-value">+${formatBytes(added)} (+${pct}%)</span>
+    `;
+    el.hidden = false;
+  } else {
+    el.hidden = true;
+  }
+}
+
+/**
+ * Set an image card's "processed" aria-label from its stored output numbers.
+ * @param {HTMLElement} card
+ */
+function setProcessedAria(card) {
+  try {
+    const { width, height, bytes } = JSON.parse(card.dataset.ariaOut);
+    card.setAttribute(
+      'aria-label',
+      t('card.ariaProcessed', { width, height, size: formatBytes(bytes) })
+    );
+  } catch {
+    /* no stored output */
+  }
+}
+
+/**
+ * Render a PDF card's "N pages · size" line from its data attributes.
+ * @param {HTMLElement} el
+ */
+function renderPdfMetaLine(el) {
+  const size = formatBytes(Number(el.dataset.bytesTotal) || 0);
+  const pages = el.dataset.pages;
+  el.textContent =
+    pages !== undefined
+      ? `${t('card.pdfPages', { count: Number(pages) })} · ${size}`
+      : `${t('card.pdfPagesLoading')} · ${size}`;
+}
+
+/**
+ * Re-render the locale-dependent values on every preview card after a language
+ * switch (LAB-28). Static labels, tooltips and aria text carry data-i18n markers
+ * and are re-translated by applyStaticTranslations(); this handles what's
+ * computed — file sizes, decimal ratios, savings rows and PDF page lines — from
+ * the raw numbers stored on each element.
+ */
+export function relocalizePreviewCards() {
+  const list = previewList();
+  if (!list) return;
+  list.querySelectorAll('[data-bytes]').forEach((el) => {
+    el.textContent = formatBytes(Number(el.dataset.bytes) || 0);
+  });
+  list.querySelectorAll('[data-ratio]').forEach((el) => {
+    const [w, h] = el.dataset.ratio.split(':').map(Number);
+    if (w > 0 && h > 0) el.textContent = getAspectRatioLabel(w, h);
+  });
+  list.querySelectorAll('[data-savings]').forEach((el) => renderSavingsRow(el));
+  list.querySelectorAll('[data-aria-out]').forEach((el) => setProcessedAria(el));
+  list.querySelectorAll('.pdf-meta-line').forEach((el) => renderPdfMetaLine(el));
 }
 
 /**

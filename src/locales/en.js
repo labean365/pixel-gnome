@@ -281,6 +281,10 @@ export default {
     zip: 'ZIP',
     zipTip: 'Download all images as a single ZIP',
     meta: 'Ready after step 1',
+    metaImages: { one: '1 image', other: '{count} images' },
+    metaOut: '{images} · ~{size} out',
+    metaCalculating: '{images} · calculating…',
+    exported: 'Exported ✓',
   },
 
   empty: {
@@ -547,6 +551,8 @@ export default {
     removeAria: 'Remove {name}',
     saved: 'Saved',
     larger: 'Larger',
+    ariaProcessing: 'Image: {name}, processing',
+    ariaProcessed: 'Image processed: {width} × {height}, {size}',
     rasterized: 'Rasterized',
     rasterizedTip: 'SVGs are vector files, so the image version is naturally larger',
     errorPrefix: 'Error: {message}',
