@@ -61,7 +61,10 @@ export default defineConfig({
         // Read the favicon SVG so we can inline it as a data URI
         let faviconDataUri = '';
         try {
-          const svgContent = fs.readFileSync(path.resolve(__dirname, 'src/favicon.svg'), 'utf8');
+          const svgContent = fs.readFileSync(
+            path.resolve(import.meta.dirname, 'src/favicon.svg'),
+            'utf8'
+          );
           faviconDataUri = 'data:image/svg+xml,' + encodeURIComponent(svgContent);
         } catch {
           /* favicon not found — skip */

@@ -1,7 +1,7 @@
 {
   "name": "pixel-gnome",
   "private": true,
-  "version": "0.31.4",
+  "version": "0.31.5",
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "author": "321Enterprise (https://321enterprise.com/)",
@@ -29,11 +29,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.5.0",
+    "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.5.0",
-    "prettier": "^3.8.3",
-    "vite": "^8.0.0",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "vite": "^8.3.4",
     "vite-plugin-singlefile": "^2.3.0"
   },
   "dependencies": {

@@ -8,6 +8,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.31.5] — 2026-10-08
+
+### Maintenance — build tools, deploy check, Dependabot config
+
+No user-facing changes; the built site is functionally identical.
+
+#### Changed
+
+- **Build tools updated:** Vite 8.0 → **8.3.4**, ESLint 10.5 → **10.12**, Prettier 3.8 → **3.9.9**, globals 17.5 → **17.13** (supersedes Dependabot's dev-dependencies PR). `npm audit fix` also cleared the brace-expansion advisories in the dev toolchain. Prettier 3.9 reformatted nothing.
+- **Deploy build now runs the PDF engine test.** `pixel-gnome-build.yaml` gains a "Verify PDF engine" step (`scripts/check-pdf-engine.mjs`), so a MuPDF update that breaks PDF saving fails the deploy instead of reaching the site. `actions/setup-node` 6 → **7** (supersedes Dependabot's PR).
+- **`dependabot.yml`:** removed the `dependencies` / `github-actions` labels — they don't exist in the repo, so every Dependabot PR carried a config error.
+- `vite.singlefile.config.js`: `__dirname` → `import.meta.dirname` (silences Vite 8.3's native-config-loader warning).
+
 ## [v0.31.4] — 2026-10-08
 
 ### Language switching updates everything on screen (LAB-28)

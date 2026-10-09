@@ -9,6 +9,12 @@
 export function getChangelogContent() {
   return `
     <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.31.5 — Maintenance</div>
+      <div class="help-changelog-items">
+        Behind-the-scenes upkeep: updated build tools and an extra automatic check that keeps the PDF tools working through future engine updates. Nothing changes in how PixelGnome looks or works. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
       <div class="help-changelog-version">v0.31.4 — Language Switch Updates Everything</div>
       <div class="help-changelog-items">
         Switching between <strong>English and Italian</strong> now updates the files you’ve already added — labels, buttons, file sizes and savings all change language straight away, no need to re-add anything. The Step&nbsp;3 export summary is now translated too, as are the preset list, History panel and screen-reader labels. (This changelog stays in English.)

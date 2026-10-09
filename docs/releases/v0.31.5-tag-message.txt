@@ -1,0 +1,13 @@
+v0.31.5 — maintenance: build tools, deploy PDF-engine gate, Dependabot config
+
+- devDeps: vite 8.0 -> 8.3.4, eslint 10.5 -> 10.12, prettier 3.8 -> 3.9.9,
+  globals 17.5 -> 17.13 (supersedes Dependabot dev-dependencies PR);
+  npm audit fix (brace-expansion)
+- pixel-gnome-build.yaml: + "Verify PDF engine" step; setup-node 6 -> 7
+  (supersedes Dependabot PR)
+- dependabot.yml: drop nonexistent 'dependencies'/'github-actions' labels
+- vite.singlefile.config.js: __dirname -> import.meta.dirname
+
+Built output functionally identical (same assets; Vite renamed the shared
+runtime chunk). verify green; SVG, language-switch, PDF-worker and
+production-preview regression tests all pass.

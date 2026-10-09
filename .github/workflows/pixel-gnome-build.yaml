@@ -28,7 +28,7 @@ jobs:
           submodules: 'recursive'
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22.x
           cache: 'npm'
@@ -50,6 +50,12 @@ jobs:
         # Fails the deploy if the PDF worker / MuPDF chunk / wasm weren't emitted
         # (the silent regressions we hit twice). See scripts/check-pdf-build.mjs.
         run: node scripts/check-pdf-build.mjs dist
+
+      - name: Verify PDF engine
+        # Runs every PDF operation against the installed MuPDF and fails the deploy
+        # if any breaks — catches a bad MuPDF bump before it ships (v0.31.3:
+        # MuPDF 1.28 rejected 'deflate=yes'). See scripts/check-pdf-engine.mjs.
+        run: node scripts/check-pdf-engine.mjs
 
 # Please do not touch the following action
       - name: Store deployment content
