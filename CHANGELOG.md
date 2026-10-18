@@ -8,6 +8,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.31.7] — 2026-10-17
+
+### Preset list in Italian + dependency updates (LAB-484)
+
+#### Fixed
+
+- **The preset dropdown now follows the UI language.** Built-in preset names and the group labels (Original / Web / Social / Email / Saved Presets) were hard-coded English in `presets.js` / `settings.js`, so `rebuildPresetDropdown()` overwrote the Italian strings that already existed in `it.js`. Built-ins now carry a `nameKey` resolved via `getPresetDisplayName()`; group labels come from the locale too, and the list re-translates on a live EN ↔ IT switch. Presets you saved yourself keep the name you typed. English labels are unchanged.
+- The save-preset name prompt and the overwrite / delete confirmations are translated (they were English-only).
+- Locale preset strings no longer hard-code the ratio badge (e.g. `· 1:1`); the dropdown appends it, so Italian shows `1,90:1` with a decimal comma.
+
+#### Changed
+
+- **heic-to 1.5.2 → 1.6.6** (libheif 1.22.2 → 1.23.6; HEIC detection now reads only the file header). Supersedes Dependabot PR #12. HEIC decode output identical in Chromium, Firefox and WebKit.
+- **prettier 3.9.9 → 3.9.10** (dev only; reformatted nothing). Supersedes Dependabot PR #11.
+
+New Italian strings are drafts pending native review (LAB-24).
+
 ## [v0.31.6] — 2026-10-17
 
 ### Image processing runs off the main thread again (LAB-519)

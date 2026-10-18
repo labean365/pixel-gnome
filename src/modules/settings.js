@@ -11,6 +11,7 @@ import {
   getPresetById,
   getDefaultPreset,
   getBuiltInPresets,
+  getPresetDisplayName,
   getPresetRatioBadge,
   loadCustomPresets,
   saveCustomPresets,
@@ -393,7 +394,7 @@ export function applyExportSize(width, height) {
 // --- Preset management handlers ---
 
 function handleSavePreset() {
-  const name = prompt('Preset name:');
+  const name = prompt(t('preset.namePrompt'));
   if (!name || !name.trim()) return;
 
   const id =
@@ -405,7 +406,7 @@ function handleSavePreset() {
 
   // Check for duplicate
   if (userPresets.find((p) => p.id === id)) {
-    if (!confirm(`A preset named "${name.trim()}" already exists. Overwrite?`)) return;
+    if (!confirm(t('preset.overwriteConfirm', { name: name.trim() }))) return;
     userPresets = userPresets.filter((p) => p.id !== id);
   }
 
@@ -440,7 +441,7 @@ function handleDeletePreset() {
   const preset = userPresets.find((p) => p.id === id);
   if (!preset) return;
 
-  if (!confirm(`Delete preset "${preset.name}"?`)) return;
+  if (!confirm(t('preset.deleteConfirm', { name: preset.name }))) return;
 
   userPresets = userPresets.filter((p) => p.id !== id);
   saveCustomPresets(userPresets);
@@ -675,19 +676,26 @@ function rebuildPresetDropdown() {
     const opt = document.createElement('option');
     opt.value = preset.id;
     const badge = getPresetRatioBadge(preset);
-    opt.textContent = badge ? `${preset.name} · ${badge}` : preset.name;
+    const name = getPresetDisplayName(preset);
+    opt.textContent = badge ? `${name} · ${badge}` : name;
     return opt;
   };
 
   // Built-in presets, bucketed into optgroups by their `group` field.
   // Order is fixed; ungrouped built-ins (e.g. Custom) render at the top level last.
   const builtIns = getBuiltInPresets();
-  const GROUP_ORDER = ['Original', 'Web', 'Social', 'Email'];
-  for (const groupName of GROUP_ORDER) {
+  // `group` stays an English id; the visible label comes from the locale (LAB-484).
+  const GROUP_ORDER = [
+    ['Original', 'preset.groupOriginal'],
+    ['Web', 'preset.groupWeb'],
+    ['Social', 'preset.groupSocial'],
+    ['Email', 'preset.groupEmail'],
+  ];
+  for (const [groupName, labelKey] of GROUP_ORDER) {
     const inGroup = builtIns.filter((p) => p.group === groupName);
     if (inGroup.length === 0) continue;
     const optgroup = document.createElement('optgroup');
-    optgroup.label = groupName;
+    optgroup.label = t(labelKey);
     for (const preset of inGroup) optgroup.appendChild(makeOption(preset));
     select.appendChild(optgroup);
   }
@@ -699,7 +707,7 @@ function rebuildPresetDropdown() {
   // User presets in their own group.
   if (userPresets.length > 0) {
     const optgroup = document.createElement('optgroup');
-    optgroup.label = 'Saved Presets';
+    optgroup.label = t('preset.groupSaved');
     for (const preset of userPresets) optgroup.appendChild(makeOption(preset));
     select.appendChild(optgroup);
   }

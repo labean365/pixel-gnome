@@ -9,6 +9,12 @@
 export function getChangelogContent() {
   return `
     <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.31.7 — Presets in Italian</div>
+      <div class="help-changelog-items">
+        The <strong>Preset</strong> list — names and groups — now switches to Italian with the rest of the interface, and so do the save and delete prompts. Presets you saved keep the name you gave them. HEIC (iPhone photo) support is updated to the latest decoder. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
       <div class="help-changelog-version">v0.31.6 — Smoother Big Batches</div>
       <div class="help-changelog-items">
         Images are processed in the background again, so the page stays responsive while a large batch of photos is resized or converted. Results are exactly the same as before. (This changelog stays in English.)

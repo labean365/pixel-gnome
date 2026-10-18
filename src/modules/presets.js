@@ -3,12 +3,13 @@
  * Built-in preset definitions and localStorage save/load for custom presets.
  */
 
-import { formatNumber } from './i18n.js';
+import { formatNumber, t } from './i18n.js';
 
 /**
  * @typedef {Object} Preset
  * @property {string} id
- * @property {string} name
+ * @property {string} name - English name; user presets keep the name typed
+ * @property {string} [nameKey] - i18n key for built-ins; resolve via getPresetDisplayName()
  * @property {'original'|'fit-within'|'max-long-edge'|'exact'} mode
  * @property {number|null} width
  * @property {number|null} height
@@ -34,6 +35,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'original',
     name: 'Original size — convert & compress',
+    nameKey: 'preset.original',
     group: 'Original',
     mode: 'original',
     width: null,
@@ -49,6 +51,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'full-hd',
     name: 'Full HD — 1920 × 1080',
+    nameKey: 'preset.fullHd',
     group: 'Web',
     mode: 'fit-within',
     width: 1920,
@@ -62,6 +65,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'large-web',
     name: 'Large Web — 1600 px',
+    nameKey: 'preset.largeWeb',
     group: 'Web',
     mode: 'max-long-edge',
     width: 1600,
@@ -75,6 +79,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'thumbnail',
     name: 'Thumbnail — 800 × 800 (fit)',
+    nameKey: 'preset.thumbnail',
     group: 'Web',
     mode: 'fit-within',
     width: 800,
@@ -90,6 +95,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'square-social',
     name: 'Social Square — 1080 × 1080',
+    nameKey: 'preset.squareSocial',
     group: 'Social',
     mode: 'exact',
     width: 1080,
@@ -103,6 +109,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'portrait-social',
     name: 'Social Portrait — 1080 × 1350',
+    nameKey: 'preset.portraitSocial',
     group: 'Social',
     mode: 'exact',
     width: 1080,
@@ -116,6 +123,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'story-social',
     name: 'Story / Reel — 1080 × 1920',
+    nameKey: 'preset.storySocial',
     group: 'Social',
     mode: 'exact',
     width: 1080,
@@ -129,6 +137,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'landscape-social',
     name: 'Social Landscape — 1200 × 675',
+    nameKey: 'preset.landscapeSocial',
     group: 'Social',
     mode: 'exact',
     width: 1200,
@@ -142,6 +151,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'open-graph',
     name: 'Open Graph / Link Preview — 1200 × 630',
+    nameKey: 'preset.openGraph',
     group: 'Social',
     mode: 'exact',
     width: 1200,
@@ -155,6 +165,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'youtube-thumb',
     name: 'YouTube Thumbnail — 1280 × 720',
+    nameKey: 'preset.youtubeThumb',
     group: 'Social',
     mode: 'exact',
     width: 1280,
@@ -168,6 +179,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'pinterest-pin',
     name: 'Pinterest Pin — 1000 × 1500',
+    nameKey: 'preset.pinterestPin',
     group: 'Social',
     mode: 'exact',
     width: 1000,
@@ -181,6 +193,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'profile-avatar',
     name: 'Profile Avatar — 800 × 800 (crop)',
+    nameKey: 'preset.profileAvatar',
     group: 'Social',
     mode: 'exact',
     width: 800,
@@ -196,6 +209,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'email-hero',
     name: 'Email Hero — 600 px wide',
+    nameKey: 'preset.emailHero',
     group: 'Email',
     mode: 'fit-within',
     width: 600,
@@ -209,6 +223,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'email-retina',
     name: 'Email Retina — 1200 px wide',
+    nameKey: 'preset.emailRetina',
     group: 'Email',
     mode: 'fit-within',
     width: 1200,
@@ -224,6 +239,7 @@ const BUILT_IN_PRESETS = [
   {
     id: 'custom',
     name: 'Custom',
+    nameKey: 'preset.custom',
     mode: 'fit-within',
     width: 1920,
     height: 1080,
@@ -277,6 +293,17 @@ export function ratioLabel(w, h) {
 export function getPresetRatioBadge(preset) {
   if (!preset || preset.mode !== 'exact') return '';
   return ratioLabel(preset.width, preset.height);
+}
+
+/**
+ * Display name for a preset in the current UI language. Built-ins carry a
+ * `nameKey` (LAB-484); user-saved presets show the name the user typed.
+ * @param {Preset} preset
+ * @returns {string}
+ */
+export function getPresetDisplayName(preset) {
+  if (!preset) return '';
+  return preset.nameKey ? t(preset.nameKey) : preset.name;
 }
 
 /**
