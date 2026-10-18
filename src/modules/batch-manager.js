@@ -41,6 +41,7 @@ let shouldCancel = false;
 
 let worker = null;
 let workerSupported = false;
+let workerFailed = false; // set on a load/runtime error so we don't respawn every batch
 let pendingWorkerJobs = new Map(); // id → { resolve, reject }
 
 /**
@@ -48,7 +49,7 @@ let pendingWorkerJobs = new Map(); // id → { resolve, reject }
  * Feature-detects OffscreenCanvas before spawning.
  */
 function initWorker() {
-  if (worker !== null) return; // Already initialized (or attempted)
+  if (worker !== null || workerFailed) return; // Already running, or failed once — don't retry
 
   try {
     // Feature-detect OffscreenCanvas
@@ -56,11 +57,6 @@ function initWorker() {
       workerSupported = false;
       return;
     }
-
-    // The new URL() pattern MUST be directly visible to Vite's static
-    // analysis so it emits the worker as a separate chunk in multi-file builds.
-    // Keep this line at the top — before any guards that might cause early return.
-    const workerUrl = new URL('./process-worker.js', import.meta.url);
 
     // In single-file builds or local file:// usage, the worker file won't exist.
     // Skip worker setup — everything falls back to main-thread processing.
@@ -70,7 +66,12 @@ function initWorker() {
       return;
     }
 
-    worker = new Worker(workerUrl, { type: 'module' });
+    // The `new URL(...)` MUST be inline inside `new Worker(...)` — Vite only
+    // detects and bundles the worker (with its imports) for this exact form.
+    // A hoisted `const url = new URL(...)` is treated as a plain asset: the
+    // source is copied verbatim, its relative imports 404 in production and
+    // every image silently falls back to the main thread (LAB-519).
+    worker = new Worker(new URL('./process-worker.js', import.meta.url), { type: 'module' });
 
     worker.onmessage = (e) => {
       const { type, id } = e.data;
@@ -97,6 +98,7 @@ function initWorker() {
     worker.onerror = (e) => {
       console.warn('PixelGnome: Worker error, falling back to main thread.', e);
       workerSupported = false;
+      workerFailed = true;
       // Reject all pending jobs so they can retry on main thread
       for (const [id, job] of pendingWorkerJobs) {
         job.reject(new Error('Worker failed'));
@@ -110,6 +112,7 @@ function initWorker() {
   } catch (err) {
     console.warn('PixelGnome: Could not create worker:', err);
     workerSupported = false;
+    workerFailed = true;
     worker = null;
   }
 }

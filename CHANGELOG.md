@@ -8,6 +8,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.31.6] — 2026-10-17
+
+### Image processing runs off the main thread again (LAB-519)
+
+#### Fixed
+
+- **The image worker now actually loads in production.** `batch-manager.js` built the worker URL on its own line (`const workerUrl = new URL(...)`), which Vite treats as a plain asset: `process-worker.js` was copied verbatim into `dist/assets/` and its relative imports (`./shared/dimensions.js`, `./smart-compress.js`) 404'd. Every JPEG/PNG/WebP/GIF silently fell back to main-thread processing, so large batches froze the page. The `new URL(...)` is now inline inside `new Worker(...)` (same pattern as the PDF worker), so Vite bundles the worker with its imports. Output is unchanged; only where the work runs.
+- If the worker ever fails to load, it is no longer re-created on every batch — one failure switches to main-thread processing for the session.
+
 ## [v0.31.5] — 2026-10-08
 
 ### Maintenance — build tools, deploy check, Dependabot config

@@ -9,6 +9,12 @@
 export function getChangelogContent() {
   return `
     <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.31.6 — Smoother Big Batches</div>
+      <div class="help-changelog-items">
+        Images are processed in the background again, so the page stays responsive while a large batch of photos is resized or converted. Results are exactly the same as before. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
       <div class="help-changelog-version">v0.31.5 — Maintenance</div>
       <div class="help-changelog-items">
         Behind-the-scenes upkeep: updated build tools and an extra automatic check that keeps the PDF tools working through future engine updates. Nothing changes in how PixelGnome looks or works. (This changelog stays in English.)

@@ -1,0 +1,9 @@
+v0.31.6 — image worker loads in production again (LAB-519)
+
+- batch-manager.js: inline new URL() inside new Worker() so Vite bundles
+  process-worker.js with its imports (hoisted URL shipped raw source whose
+  relative imports 404'd; every image fell back to the main thread)
+- don't respawn a failed worker on every batch (workerFailed flag)
+
+Output unchanged. verify green; Chromium/Firefox/WebKit: no 404s, no
+main-thread fallback (live v0.31.5 showed both).
