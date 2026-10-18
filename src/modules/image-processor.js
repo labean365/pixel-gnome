@@ -186,7 +186,13 @@ function setSvgRootSize(svgText, width, height) {
 /**
  * Rasterize an SVG file to an Image element
  */
-async function rasterizeSvg(file, targetSize) {
+/**
+ * @param {File} file
+ * @param {number} [targetSize] - fallback size when the SVG declares none
+ * @param {number} [scale=1] - render at scale × the intrinsic size (crisp upscaling,
+ *   LAB-480). `_svgWidth/_svgHeight` always report the intrinsic size.
+ */
+async function rasterizeSvg(file, targetSize, scale = 1) {
   const text = await file.text();
   // Sanitize: strip script tags and event handlers
   let sanitized = sanitizeSvg(text);
@@ -209,7 +215,9 @@ async function rasterizeSvg(file, targetSize) {
 
   // Make the browser's intrinsic size agree with the size we computed, so the
   // rasterized pixels match _svgWidth/_svgHeight on every engine.
-  sanitized = setSvgRootSize(sanitized, w, h);
+  const renderW = Math.max(1, Math.round(w * scale));
+  const renderH = Math.max(1, Math.round(h * scale));
+  sanitized = setSvgRootSize(sanitized, renderW, renderH);
 
   // Create image from data URI
   const encoded = encodeURIComponent(sanitized);
@@ -223,11 +231,13 @@ async function rasterizeSvg(file, targetSize) {
       // return viewBox dimensions, some return 0, some echo back the attribute).
       img._svgWidth = w;
       img._svgHeight = h;
+      img._renderWidth = renderW;
+      img._renderHeight = renderH;
       resolve(img);
     };
     img.onerror = () => reject(new Error('Failed to rasterize SVG'));
-    img.width = w;
-    img.height = h;
+    img.width = renderW;
+    img.height = renderH;
     img.src = dataUri;
   });
 }
@@ -324,15 +334,27 @@ export async function processImage(file, settings, edits) {
   let skipExif = false;
 
   if (isSvgFile(file)) {
-    const svgImg = await rasterizeSvg(file);
+    let svgImg = await rasterizeSvg(file);
     // Use parsed SVG dimensions (reliable) over naturalWidth/Height (browser-dependent)
-    const srcWidth = svgImg._svgWidth || svgImg.naturalWidth || svgImg.width;
-    const srcHeight = svgImg._svgHeight || svgImg.naturalHeight || svgImg.height;
+    let srcWidth = svgImg._svgWidth || svgImg.naturalWidth || svgImg.width;
+    let srcHeight = svgImg._svgHeight || svgImg.naturalHeight || svgImg.height;
 
-    const editedW =
-      edits && hasEdits(edits) ? getEditedDimensions(srcWidth, srcHeight, edits).width : srcWidth;
-    const editedH =
-      edits && hasEdits(edits) ? getEditedDimensions(srcWidth, srcHeight, edits).height : srcHeight;
+    const editedSize = (w, h) =>
+      edits && hasEdits(edits) ? getEditedDimensions(w, h, edits) : { width: w, height: h };
+    let { width: editedW, height: editedH } = editedSize(srcWidth, srcHeight);
+
+    // Vectors may scale up (LAB-480). When the output is larger than the SVG's
+    // intrinsic size, re-render the SVG at that scale instead of stretching the
+    // small raster, so the result stays sharp. Crop edits are fractional, so
+    // they carry over to the larger render unchanged.
+    const target = calculateDimensions(editedW, editedH, settings, { isVector: true });
+    const upscale = Math.max(target.width / editedW, target.height / editedH);
+    if (upscale > 1) {
+      svgImg = await rasterizeSvg(file, undefined, upscale);
+      srcWidth = svgImg._renderWidth;
+      srcHeight = svgImg._renderHeight;
+      ({ width: editedW, height: editedH } = editedSize(srcWidth, srcHeight));
+    }
 
     let editedSource = null;
     if (edits && hasEdits(edits)) {
@@ -347,7 +369,6 @@ export async function processImage(file, settings, edits) {
       editedSource = applyEditsToCanvas(tempCanvas, srcWidth, srcHeight, edits);
     }
 
-    const target = calculateDimensions(editedW, editedH, settings);
     const canvas = document.createElement('canvas');
     canvas.width = target.width;
     canvas.height = target.height;

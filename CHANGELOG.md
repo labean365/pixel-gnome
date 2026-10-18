@@ -8,6 +8,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.31.8] — 2026-10-17
+
+### SVGs scale up sharply (LAB-480)
+
+#### Changed
+
+- **Small SVGs can now be enlarged.** A vector has no real pixel size, so "Never upscale" no longer applies to SVG input, and the Fit-within / Max-long-edge modes enlarge it to the target. A 24 × 24 icon exported with "Fit within 800" now comes out at 800 × 800 instead of 24 × 24. Raster images are unchanged, and **Original size** still uses the SVG's own size.
+- When enlarging, the SVG is re-rendered at the output size rather than stretched from its small raster, so edges stay sharp. Crop / rotate edits carry over.
+
+Implementation: `calculateDimensions(…, { isVector: true })` in `shared/dimensions.js`; `rasterizeSvg(file, targetSize, scale)` renders at `scale ×` the intrinsic size. Also guards two raster edge cases: fit-within with no width or height, and max-long-edge with no edge value, now return the source size instead of NaN.
+
 ## [v0.31.7] — 2026-10-17
 
 ### Preset list in Italian + dependency updates (LAB-484)

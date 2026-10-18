@@ -9,6 +9,12 @@
 export function getChangelogContent() {
   return `
     <div class="help-changelog-entry">
+      <div class="help-changelog-version">v0.31.8 — Sharper SVG Enlarging</div>
+      <div class="help-changelog-items">
+        Small <strong>SVG</strong> files (like icons) can now be enlarged to any preset size and stay perfectly sharp — a 24&nbsp;×&nbsp;24 icon exported with “Fit within 800” comes out at 800&nbsp;×&nbsp;800. Photos and other images still never get upscaled. (This changelog stays in English.)
+      </div>
+    </div>
+    <div class="help-changelog-entry">
       <div class="help-changelog-version">v0.31.7 — Presets in Italian</div>
       <div class="help-changelog-items">
         The <strong>Preset</strong> list — names and groups — now switches to Italian with the rest of the interface, and so do the save and delete prompts. Presets you saved keep the name you gave them. HEIC (iPhone photo) support is updated to the latest decoder. (This changelog stays in English.)

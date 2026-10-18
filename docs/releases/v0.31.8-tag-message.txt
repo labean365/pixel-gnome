@@ -1,0 +1,11 @@
+v0.31.8 — SVGs scale up sharply (LAB-480)
+
+- calculateDimensions(..., { isVector }): SVG input may enlarge in
+  fit-within / max-long-edge, and exact ignores neverUpscale; raster
+  behaviour and 'original' mode unchanged
+- SVG path re-renders at the output scale instead of stretching the
+  intrinsic-size raster (rasterizeSvg scale param); crop edits carry over
+- fit-within / max-long-edge with no target size return the source size
+
+verify green; 12-case dimension table; Chromium/Firefox/WebKit output
+sizes and edge sharpness checked.

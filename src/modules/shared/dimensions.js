@@ -21,8 +21,11 @@
  * }} settings
  * @returns {{ width: number, height: number }}
  */
-export function calculateDimensions(srcWidth, srcHeight, settings) {
+export function calculateDimensions(srcWidth, srcHeight, settings, { isVector = false } = {}) {
   const { mode, width: targetW, height: targetH, neverUpscale } = settings;
+  // Vectors (SVG) have no real pixel size, so scaling one up loses nothing:
+  // the fit modes may enlarge it and "Never upscale" doesn't apply (LAB-480).
+  // 'original' still uses the SVG's intrinsic size.
 
   switch (mode) {
     case 'original': {
@@ -34,11 +37,12 @@ export function calculateDimensions(srcWidth, srcHeight, settings) {
       const tw = targetW || Infinity;
       const th = targetH || Infinity;
 
-      if (srcWidth <= tw && srcHeight <= th) {
+      if (!isVector && srcWidth <= tw && srcHeight <= th) {
         return { width: srcWidth, height: srcHeight };
       }
 
       const ratio = Math.min(tw / srcWidth, th / srcHeight);
+      if (!Number.isFinite(ratio)) return { width: srcWidth, height: srcHeight };
       return {
         width: Math.round(srcWidth * ratio),
         height: Math.round(srcHeight * ratio),
@@ -49,7 +53,7 @@ export function calculateDimensions(srcWidth, srcHeight, settings) {
       const maxEdge = targetW;
       const longEdge = Math.max(srcWidth, srcHeight);
 
-      if (longEdge <= maxEdge) {
+      if (!maxEdge || (!isVector && longEdge <= maxEdge)) {
         return { width: srcWidth, height: srcHeight };
       }
 
@@ -66,7 +70,7 @@ export function calculateDimensions(srcWidth, srcHeight, settings) {
 
       // In exact mode with neverUpscale, clamp to source while maintaining
       // the target aspect ratio.
-      if (neverUpscale && (w > srcWidth || h > srcHeight)) {
+      if (neverUpscale && !isVector && (w > srcWidth || h > srcHeight)) {
         const targetAspect = w / h;
         const srcAspect = srcWidth / srcHeight;
         if (srcAspect > targetAspect) {
